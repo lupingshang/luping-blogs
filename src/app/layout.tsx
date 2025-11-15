@@ -1,5 +1,7 @@
-import type { Metadata } from "next";
+"use client";
 import { Geist, Geist_Mono } from "next/font/google";
+import { ThemeProvider, createTheme, CssBaseline } from "@mui/material";
+import Layout from "@/components/Layout";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,10 +14,18 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "luping blogs",
-  description: "luping blogs",
-};
+const darkTheme = createTheme({
+  palette: {
+    mode: "dark",
+    background: {
+      default: "#111417",
+      paper: "#111417",
+    },
+    text: {
+      primary: "#ffffff",
+    },
+  },
+});
 
 export default function RootLayout({
   children,
@@ -27,7 +37,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <ThemeProvider theme={darkTheme}>
+          <CssBaseline />
+          <Layout>{children}</Layout>
+        </ThemeProvider>
       </body>
     </html>
   );

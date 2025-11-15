@@ -1,5 +1,3 @@
-import React from "react";
-
-export default function page() {
+export default function HomeDashboardPage() {
   return <div>主页</div>;
 }

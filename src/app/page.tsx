@@ -1,3 +1,3 @@
-export default function Home() {
-  return <div>我的第一个app</div>;
+export default function HomePage() {
+  return <div>Home</div>;
 }
