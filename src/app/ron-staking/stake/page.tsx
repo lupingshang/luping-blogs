@@ -10,14 +10,17 @@ import {
   Button,
   Alert,
   Grid,
+  Chip,
+  IconButton,
 } from "@mui/material";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import stakRewardAbi from "./abi/stakRewardAbi.json";
 import stakTokenAbi from "./abi/stakTokenAbi.json";
 import rewradTokenAbi from "./abi/rewradTokenAbi.json";
 
-const CONTRACT_ADDRESS = "0x99bDFD00D4Ea21D224E2E04b5B13491c6c4f9fA0"; // StakingRewards 质押合约
+const CONTRACT_ADDRESS = "0xE36eD9ADfcdB79aaa117999929E06187ac48E9d3"; // StakingRewards 质押合约
 const RPC = "https://eth-sepolia.g.alchemy.com/v2/J30oQ4CibHuYPK88gOqk6";
-const privateKey =
+const privvateKey =
   "a07bfab4d89b46eb66a0de294c4160e4f0acd79ad26deb344f1bb559b570adb5";
 // ERC20 ABI
 const ERC20_ABI = [
@@ -65,11 +68,14 @@ export default function EthStakingPage() {
   const [notifyAmount, setNotifyAmount] = useState<string>("");
   const [notifyLoading, setNotifyLoading] = useState<boolean>(false);
 
-  // Transfer 相关
-  const [transferAddress, setTransferAddress] = useState<string>("");
-  const [transferAmount, setTransferAmount] = useState<string>("");
-  const [transferLoading, setTransferLoading] = useState<boolean>(false);
-
+  // mint reward相关
+  const [rewardMintAddress, setRewardMintAddress] = useState<string>("");
+  const [rewardMintAmount, setRewardMintAmount] = useState<string>("");
+  const [rewardMintLoading, setRewardMintLoading] = useState<boolean>(false);
+  // mint stak相关
+  const [stakMitAddress, setStakMitAddress] = useState<string>("");
+  const [stakMintAmount, setStakMintAmount] = useState<string>("");
+  const [stakMintLoading, setStakMintLoading] = useState<boolean>(false);
   // BalanceOf 相关
   const [balanceAddress, setBalanceAddress] = useState<string>("");
   const [balanceResult, setBalanceResult] = useState<string>("");
@@ -87,6 +93,10 @@ export default function EthStakingPage() {
   // GetReward 相关
   const [getRewardLoading, setGetRewardLoading] = useState<boolean>(false);
 
+  // Stake 相关
+  const [stakeAmount, setStakeAmount] = useState<string>("");
+  const [stakeLoading, setStakeLoading] = useState<boolean>(false);
+
   //质押合约总供应量
   const [stakTotalSupply, setStakTotalSupply] = useState<string>("-");
 
@@ -94,40 +104,13 @@ export default function EthStakingPage() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
-
   useEffect(() => {
-    connectContract();
-
-    // 监听账户切换
-    if (window.ethereum) {
-      const handleAccountsChanged = (accounts: string[]) => {
-        console.log("00000监听到了么123", accounts);
-
-        if (accounts.length > 0) {
-          setAccount(accounts[0]);
-          setSuccess(
-            `账户已切换到 ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`
-          );
-          // 重新加载合约数据
-          connectContract();
-        } else {
-          setAccount("");
-          setError("请连接钱包");
-        }
-      };
-
-      window.ethereum.on("accountsChanged", handleAccountsChanged);
-
-      // 清理监听器
-      return () => {
-        window.ethereum.removeListener(
-          "accountsChanged",
-          handleAccountsChanged
-        );
-      };
-    }
-  }, []);
-
+    window.ethereum.on("accountsChanged", (accounts: string[]) => {
+      if (accounts.length > 0) {
+        connectContract();
+      }
+    });
+  });
   useEffect(() => {
     if (contract && stakingToken && rewardToken && account) {
       loadContractData();
@@ -145,40 +128,42 @@ export default function EthStakingPage() {
         setError("请安装 MetaMask");
         return;
       }
-      const providerSepolia = new ethers.JsonRpcProvider(RPC);
-      //钱包签名 参数 是私钥和节点 这里是alchemy sepolia节点
-      const wallet = new ethers.Wallet(privateKey, providerSepolia);
-      //获取当前账户
-      const accounts = await wallet.address;
-      //链接质押合约
-      const contract = await new ethers.Contract(
+
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      // 连接钱包和合约
+      const accounts = await provider.send("eth_requestAccounts", []);
+      const signer = await provider.getSigner();
+      const contract = new ethers.Contract(
         CONTRACT_ADDRESS,
         stakRewardAbi.output.abi,
-        wallet
+        signer
       );
-      //从质押合约中获取质押代币地址
+
       const stakingTokenAddress = await contract.stakingToken();
       stakingTokenAddressRef.current = stakingTokenAddress;
 
       //获取奖励代币地址
       const rewardTokenAddress = await contract.rewardsToken();
+      console.log("奖励代币地址:", rewardTokenAddress);
       rewardTokenAddressRef.current = rewardTokenAddress;
+
       //链接质押代币合约
-      const stakingToken = await new ethers.Contract(
+      const stakingToken = new ethers.Contract(
         stakingTokenAddress,
         stakTokenAbi.output.abi,
-        wallet
+        signer
       );
       //链接奖励代币合约
-      const rewardToken = await new ethers.Contract(
+      const rewardToken = new ethers.Contract(
         rewardTokenAddress,
         rewradTokenAbi.output.abi,
-        wallet
+        signer
       );
-      setAccount(accounts);
+      setAccount(accounts[0]);
       setContract(contract);
       setStakingToken(stakingToken);
       setRewardToken(rewardToken);
+      setSuccess("合约连接成功！");
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -204,7 +189,6 @@ export default function EthStakingPage() {
       //奖励代币数据
       Promise.all([rewardToken.name(), rewardToken.totalSupply()]).then(
         ([rewardTokenName, totalSupply]) => {
-          console.log("奖励代币名称:", rewardTokenName);
           setRewardTokenName(rewardTokenName);
           setRewardTokenTotalSupply(ethers.formatEther(totalSupply));
         }
@@ -312,35 +296,64 @@ export default function EthStakingPage() {
     }
   };
 
-  // Transfer 转账
-  const handleTransferToken = async () => {
-    if (!stakingToken || !transferAddress || !transferAmount) return;
+  //mint 奖励token
+  const handleRewardMintToken = async () => {
+    if (!rewardMintAddress || !rewardMintAmount || rewardMintLoading) return;
 
     try {
-      setTransferLoading(true);
+      setRewardMintLoading(true);
       setError("");
       setSuccess("");
 
-      const amount = ethers.parseEther(transferAmount);
-      const tx = await stakingToken.transfer(transferAddress, amount);
+      const amount = ethers.parseEther(rewardMintAmount);
+      const tx = await rewardToken?.mint(rewardMintAddress, amount);
       await tx.wait();
 
       setSuccess(
-        `成功转账 ${transferAmount} STK 到 ${transferAddress.slice(
+        `成功mint ${rewardMintAmount} STK 到 ${rewardMintAddress.slice(
           0,
           6
-        )}...${transferAddress.slice(-4)}`
+        )}...${rewardMintAddress.slice(-4)}`
       );
-      setTransferAddress("");
-      setTransferAmount("");
+      setRewardMintAddress("");
+      setRewardMintAmount("");
       connectContract();
     } catch (err: any) {
       setError(err.message);
     } finally {
-      setTransferLoading(false);
+      setRewardMintLoading(false);
     }
   };
+  //mint 质押token
+  const handleStakMintToken = async () => {
+    console.log(stakMitAddress, stakMintAmount, stakMintLoading);
 
+    if (!stakMitAddress || !stakMintAmount || stakMintLoading) return;
+    console.log("质押 mint ");
+
+    try {
+      setStakMintLoading(true);
+      setError("");
+      setSuccess("");
+      const amount = ethers.parseEther(stakMintAmount);
+      const tx = await stakingToken?.mint(stakMitAddress, amount);
+      await tx.wait();
+
+      setSuccess(
+        `成功mint ${stakMintAmount} STK 到 ${stakMitAddress.slice(
+          0,
+          6
+        )}...${stakMitAddress.slice(-4)}`
+      );
+      setStakMitAddress("");
+      setStakMintAmount("");
+      connectContract();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setStakMintLoading(false);
+    }
+  };
   // 查询余额
   const handleCheckBalance = async () => {
     if (!stakingToken || !balanceAddress) return;
@@ -436,16 +449,25 @@ export default function EthStakingPage() {
 
   // 质押
   const handleStake = async () => {
-    if (!contract) return;
+    if (!contract || !stakeAmount) return;
 
     try {
-      setLoading(true);
+      setStakeLoading(true);
       setError("");
       setSuccess("");
+
+      const amount = ethers.parseEther(stakeAmount);
+      const tx = await contract.stake(amount);
+      await tx.wait();
+
+      setSuccess(`成功质押 ${stakeAmount} STK`);
+      setStakeAmount("");
+      // 刷新数据
+      connectContract();
     } catch (err: any) {
       setError(err.message);
     } finally {
-      setLoading(false);
+      setStakeLoading(false);
     }
   };
 
@@ -461,7 +483,18 @@ export default function EthStakingPage() {
       setLoading(false);
     }
   };
+  const handleDisconnect = () => {
+    // 清空状态
+    setAccount("");
+    setContract(null);
+    setStakingToken(null);
+    setRewardToken(null);
 
+    // 提示用户
+
+    // 可选：刷新页面
+    // window.location.reload();
+  };
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
@@ -480,9 +513,34 @@ export default function EthStakingPage() {
       )}
 
       <>
-        <Typography variant="body2" sx={{ mb: 3 }}>
-          Account：{account.slice(0, 6)}...{account.slice(-4)}
-        </Typography>
+        {account ? (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+            <Typography color="success">
+              当前账号为： {account.slice(0, 6)}...{account.slice(-4)}
+            </Typography>
+            <IconButton
+              size="small"
+              onClick={() => {
+                navigator.clipboard.writeText(account);
+                setSuccess("地址已复制到剪贴板");
+              }}
+              title="复制完整地址"
+            >
+              <ContentCopyIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        ) : (
+          <Button
+            variant="contained"
+            color="primary"
+            sx={{ textTransform: "none", mb: 1 }}
+            onClick={connectContract}
+            loading={loading}
+          >
+            connnect Wallet
+          </Button>
+        )}
+
         <Grid container spacing={3}>
           {/* 质押合约 */}
           <Grid size={{ xs: 12, md: 4 }}>
@@ -538,6 +596,26 @@ export default function EthStakingPage() {
                   {notifyLoading ? "通知中..." : "通知奖励金额"}
                 </Button>
 
+                <TextField
+                  label="质押数量"
+                  value={stakeAmount}
+                  onChange={(e) => setStakeAmount(e.target.value)}
+                  type="number"
+                  size="small"
+                  sx={{ mb: 1 }}
+                />
+                <Button
+                  fullWidth
+                  variant="contained"
+                  color="primary"
+                  onClick={handleStake}
+                  disabled={stakeLoading || !stakeAmount}
+                  size="small"
+                  sx={{ mb: 2 }}
+                >
+                  {stakeLoading ? "质押中..." : "质押 (stake)"}
+                </Button>
+
                 <Button
                   fullWidth
                   variant="contained"
@@ -588,15 +666,15 @@ export default function EthStakingPage() {
 
                 <TextField
                   label="接收地址"
-                  value={transferAddress}
-                  onChange={(e) => setTransferAddress(e.target.value)}
+                  value={stakMitAddress}
+                  onChange={(e) => setStakMitAddress(e.target.value)}
                   size="small"
                   sx={{ mb: 1 }}
                 />
                 <TextField
                   label="数量"
-                  value={transferAmount}
-                  onChange={(e) => setTransferAmount(e.target.value)}
+                  value={stakMintAmount}
+                  onChange={(e) => setStakMintAmount(e.target.value)}
                   type="number"
                   size="small"
                   sx={{ mb: 1 }}
@@ -604,14 +682,14 @@ export default function EthStakingPage() {
                 <Button
                   fullWidth
                   variant="contained"
-                  onClick={handleTransferToken}
+                  onClick={handleStakMintToken}
                   disabled={
-                    transferLoading || !transferAddress || !transferAmount
+                    stakMintLoading || !stakMitAddress || !stakMintAmount
                   }
                   size="small"
                   sx={{ mb: 2 }}
                 >
-                  {transferLoading ? "转账中..." : "转账"}
+                  {stakMintLoading ? "Mint..." : "Mint"}
                 </Button>
                 <TextField
                   label="查询地址"
@@ -631,7 +709,7 @@ export default function EthStakingPage() {
                   {balanceLoading ? "查询中..." : "查询余额"}
                 </Button>
                 {balanceResult && (
-                  <Typography variant="body2" color="primary">
+                  <Typography sx={{ mb: 2 }} variant="body2" color="primary">
                     余额: {balanceResult} STK
                   </Typography>
                 )}
@@ -676,24 +754,33 @@ export default function EthStakingPage() {
                 >
                   totalSupply:{rewardTokenTotalSupply}
                 </Typography>
-
-                <Button
-                  variant="contained"
-                  onClick={handleTransfer}
-                  disabled={mintLoading || !mintAmount}
+                <TextField
+                  label="接收地址"
+                  value={rewardMintAddress}
+                  onChange={(e) => setRewardMintAddress(e.target.value)}
                   size="small"
-                >
-                  {mintLoading ? "Transfer..." : "Transfer"}
-                </Button>
+                  sx={{ mb: 1 }}
+                />
                 <TextField
                   label="数量"
-                  value={mintAmount}
-                  onChange={(e) => setMintAmount(e.target.value)}
+                  value={rewardMintAmount}
+                  onChange={(e) => setRewardMintAmount(e.target.value)}
                   type="number"
                   size="small"
-                  sx={{ ml: 1 }}
+                  sx={{ mb: 1 }}
                 />
-
+                <Button
+                  fullWidth
+                  variant="contained"
+                  onClick={handleRewardMintToken}
+                  disabled={
+                    rewardMintLoading || !rewardMintAddress || !rewardMintAmount
+                  }
+                  size="small"
+                  sx={{ mb: 2 }}
+                >
+                  {stakMintLoading ? "Mint..." : "Mint"}
+                </Button>
                 <Box sx={{ mt: 2 }}>
                   <TextField
                     fullWidth
@@ -714,7 +801,7 @@ export default function EthStakingPage() {
                     {queryLoading ? "查询中..." : "查询余额"}
                   </Button>
                   {queryBalance && (
-                    <Typography variant="body2" sx={{ mt: 1 }} color="primary">
+                    <Typography variant="body2" sx={{ mb: 1 }} color="primary">
                       余额: {queryBalance} RWT
                     </Typography>
                   )}

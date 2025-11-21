@@ -1,8 +1,15 @@
+"use client";
+import { use, useEffect } from "react";
+import { ethers } from "ethers";
 export default function WagmiPage() {
-  return (
-    <div>
-      <h1>WAGMI Staking</h1>
-      <p>这是 WAGMI 质押页面</p>
-    </div>
-  );
+  useEffect(() => {
+    init();
+  }, []);
+  const init = () => {
+    const wallet = ethers.Wallet.createRandom(); // 创建一个随机钱包
+    const address = wallet.getAddress();
+
+    console.log(address, "------当前地址");
+  };
+  return <div>测试</div>;
 }

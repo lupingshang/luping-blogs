@@ -63,7 +63,7 @@ export default function Sidebar() {
       text: "RON Staking",
       icon: <InboxIcon />,
       children: [
-        { text: "ETH", path: "/ron-staking/eth" },
+        { text: "stake", path: "/ron-staking/stake" },
         { text: "WAGMI", path: "/ron-staking/wagmi" },
       ],
     },
