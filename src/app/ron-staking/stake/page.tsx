@@ -88,6 +88,7 @@ export default function EthStakingPage() {
 
   // Earned 相关
   const [earnedResult, setEarnedResult] = useState<string>("");
+  const [earnedAdress, setEarnedAdress] = useState<string>("");
   const [earnedLoading, setEarnedLoading] = useState<boolean>(false);
 
   // GetReward 相关
@@ -163,7 +164,7 @@ export default function EthStakingPage() {
       setContract(contract);
       setStakingToken(stakingToken);
       setRewardToken(rewardToken);
-      setSuccess("合约连接成功！");
+      // setSuccess("合约连接成功！");
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -405,13 +406,13 @@ export default function EthStakingPage() {
 
   // 查询已赚取的奖励
   const handleCheckEarned = async () => {
-    if (!contract || !account) return;
+    if (!contract || !earnedAdress) return;
 
     try {
       setEarnedLoading(true);
       setError("");
 
-      const earned = await contract.earned(account);
+      const earned = await contract.earned(earnedAdress);
       const formattedEarned = ethers.formatEther(earned);
 
       setEarnedResult(formattedEarned);
@@ -615,16 +616,23 @@ export default function EthStakingPage() {
                 >
                   {stakeLoading ? "质押中..." : "质押 (stake)"}
                 </Button>
-
+                <TextField
+                  label="查询地址"
+                  value={earnedAdress}
+                  onChange={(e) => setEarnedAdress(e.target.value)}
+                  type="string"
+                  size="small"
+                  sx={{ mb: 1 }}
+                />
                 <Button
                   fullWidth
                   variant="contained"
                   onClick={handleCheckEarned}
-                  disabled={earnedLoading || !account}
+                  disabled={earnedLoading || !earnedAdress}
                   size="medium"
-                  sx={{ mb: 2 }}
+                  sx={{ mb: 2, textTransform: "none" }}
                 >
-                  {earnedLoading ? "查询中..." : "查询 Earned"}
+                  {earnedLoading ? "查询中..." : "查询Earned"}
                 </Button>
                 {earnedResult && (
                   <Typography
