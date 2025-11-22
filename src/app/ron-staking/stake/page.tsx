@@ -139,13 +139,13 @@ export default function EthStakingPage() {
         stakRewardAbi.output.abi,
         signer
       );
+      console.log("合---》地址", await contract.getAddress());
 
       const stakingTokenAddress = await contract.stakingToken();
       stakingTokenAddressRef.current = stakingTokenAddress;
 
       //获取奖励代币地址
       const rewardTokenAddress = await contract.rewardsToken();
-      console.log("奖励代币地址:", rewardTokenAddress);
       rewardTokenAddressRef.current = rewardTokenAddress;
 
       //链接质押代币合约
