@@ -19,6 +19,9 @@ import {
   Inbox as InboxIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
+  ShoppingCart,
+  Loupe,
+  Dataset,
 } from "@mui/icons-material";
 
 export default function Sidebar() {
@@ -66,6 +69,27 @@ export default function Sidebar() {
         { text: "stake", path: "/ron-staking/stake" },
         { text: "WAGMI", path: "/ron-staking/wagmi" },
       ],
+    },
+    {
+      key: "Listmynft",
+      text: "List My NFT",
+      icon: <Loupe />,
+      path: "/List-my-nft",
+      children: [],
+    },
+    {
+      key: "marketplace",
+      text: "Marketplace",
+      icon: <Dataset />,
+      path: "/marketplace",
+      children: [],
+    },
+    {
+      key: "profile",
+      text: "Profile",
+      icon: <ShoppingCart />,
+      path: "/profile",
+      children: [],
     },
   ];
 

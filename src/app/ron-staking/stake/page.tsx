@@ -139,7 +139,8 @@ export default function EthStakingPage() {
         stakRewardAbi.output.abi,
         signer
       );
-      console.log("合---》地址", await contract.getAddress());
+      // console.log("合---》地址", await contract.getAddress());
+      // console.log("合约字节码", await contract.getDeployedCode());
 
       const stakingTokenAddress = await contract.stakingToken();
       stakingTokenAddressRef.current = stakingTokenAddress;
