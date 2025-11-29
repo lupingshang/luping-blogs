@@ -10,33 +10,21 @@ import {
   Button,
   Alert,
   Grid,
-  Chip,
-  IconButton,
 } from "@mui/material";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import stakRewardAbi from "./abi/stakRewardAbi.json";
 import stakTokenAbi from "./abi/stakTokenAbi.json";
 import rewradTokenAbi from "./abi/rewradTokenAbi.json";
+import { useWalletStore } from "@/store/wallet";
+import { useWalletReconnect } from "@/hooks/useWalletReconnect";
 
 const CONTRACT_ADDRESS = "0xE36eD9ADfcdB79aaa117999929E06187ac48E9d3"; // StakingRewards 质押合约
-const RPC = "https://eth-sepolia.g.alchemy.com/v2/J30oQ4CibHuYPK88gOqk6";
-const privvateKey =
-  "a07bfab4d89b46eb66a0de294c4160e4f0acd79ad26deb344f1bb559b570adb5";
-// ERC20 ABI
-const ERC20_ABI = [
-  "function symbol() view returns (string)",
-  "function transfer(address to, uint256 value) public returns (bool)",
-  "function decimals() view returns (uint8)",
-  "function balanceOf(address owner) view returns (uint256)",
-];
-
 export default function EthStakingPage() {
+  useWalletReconnect();
+
   // 使用 ref 存储合约地址
   const stakingTokenAddressRef = useRef<string>("");
   const rewardTokenAddressRef = useRef<string>("");
 
-  //当前账户
-  const [account, setAccount] = useState<string>("");
   //质押合约
   const [contract, setContract] = useState<ethers.Contract | null>(null);
 
@@ -105,43 +93,30 @@ export default function EthStakingPage() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
+  const { signer, walletAdress } = useWalletStore();
+
   useEffect(() => {
-    window.ethereum.on("accountsChanged", (accounts: string[]) => {
-      if (accounts.length > 0) {
-        connectContract();
-      }
-    });
-  });
-  useEffect(() => {
-    if (contract && stakingToken && rewardToken && account) {
-      loadContractData();
-      const interval = setInterval(loadContractData, 10000); // 每10秒刷新
-      return () => clearInterval(interval);
+    if (signer) {
+      connectContract();
     }
-  }, [contract, stakingToken, rewardToken, account]);
+  }, [signer]);
+  useEffect(() => {
+    if (contract && stakingToken && rewardToken && walletAdress) {
+      loadContractData();
+      // const interval = setInterval(loadContractData, 10000); // 每10秒刷新
+      // return () => clearInterval(interval);
+    }
+  }, [contract, stakingToken, rewardToken, walletAdress]);
   // 连接钱包 链接合约
   const connectContract = async () => {
+    console.log("----是否有签名信息");
+
     try {
-      setLoading(true);
-      setError("");
-
-      if (!window.ethereum) {
-        setError("请安装 MetaMask");
-        return;
-      }
-
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      // 连接钱包和合约
-      const accounts = await provider.send("eth_requestAccounts", []);
-      const signer = await provider.getSigner();
       const contract = new ethers.Contract(
         CONTRACT_ADDRESS,
         stakRewardAbi.output.abi,
         signer
       );
-      // console.log("合---》地址", await contract.getAddress());
-      // console.log("合约字节码", await contract.getDeployedCode());
-
       const stakingTokenAddress = await contract.stakingToken();
       stakingTokenAddressRef.current = stakingTokenAddress;
 
@@ -161,7 +136,6 @@ export default function EthStakingPage() {
         rewradTokenAbi.output.abi,
         signer
       );
-      setAccount(accounts[0]);
       setContract(contract);
       setStakingToken(stakingToken);
       setRewardToken(rewardToken);
@@ -175,7 +149,9 @@ export default function EthStakingPage() {
 
   // 加载合约数据
   const loadContractData = async () => {
-    if (!contract || !stakingToken || !rewardToken || !account) return;
+    if (!contract || !stakingToken || !rewardToken || !walletAdress) return;
+    console.log("---执行了么", "----");
+
     try {
       //质押数据
       Promise.all([contract.totalSupply()]).then(([totalSupply]) => {
@@ -485,18 +461,6 @@ export default function EthStakingPage() {
       setLoading(false);
     }
   };
-  const handleDisconnect = () => {
-    // 清空状态
-    setAccount("");
-    setContract(null);
-    setStakingToken(null);
-    setRewardToken(null);
-
-    // 提示用户
-
-    // 可选：刷新页面
-    // window.location.reload();
-  };
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
@@ -515,34 +479,6 @@ export default function EthStakingPage() {
       )}
 
       <>
-        {account ? (
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
-            <Typography color="success">
-              当前账号为： {account.slice(0, 6)}...{account.slice(-4)}
-            </Typography>
-            <IconButton
-              size="small"
-              onClick={() => {
-                navigator.clipboard.writeText(account);
-                setSuccess("地址已复制到剪贴板");
-              }}
-              title="复制完整地址"
-            >
-              <ContentCopyIcon fontSize="small" />
-            </IconButton>
-          </Box>
-        ) : (
-          <Button
-            variant="contained"
-            color="primary"
-            sx={{ textTransform: "none", mb: 1 }}
-            onClick={connectContract}
-            loading={loading}
-          >
-            connnect Wallet
-          </Button>
-        )}
-
         <Grid container spacing={3}>
           {/* 质押合约 */}
           <Grid size={{ xs: 12, md: 4 }}>
@@ -788,7 +724,7 @@ export default function EthStakingPage() {
                   size="small"
                   sx={{ mb: 2 }}
                 >
-                  {stakMintLoading ? "Mint..." : "Mint"}
+                  {rewardMintLoading ? "Mint..." : "Mint"}
                 </Button>
                 <Box sx={{ mt: 2 }}>
                   <TextField
