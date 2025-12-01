@@ -1,21 +1,61 @@
 "use client";
-import { useState } from "react";
-import { Box, TextField, Button, Typography, Card } from "@mui/material";
-
+import { useEffect, useState } from "react";
+import {
+  Box,
+  TextField,
+  Button,
+  Typography,
+  Card,
+  Snackbar,
+  Alert,
+} from "@mui/material";
+import { getImageUrl, uploadImageToPinata } from "@/utils/pinata";
+import { ethers } from "ethers";
 export default function WagmiPage() {
   const [nftName, setNftName] = useState("");
   const [nftDescription, setNftDescription] = useState("");
   const [price, setPrice] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [uploadPinataLoading, setUploadPinataLoading] =
+    useState<boolean>(false);
+  const [open, setOpen] = useState<boolean>(false);
+  const [imgToken, setImgToken] = useState<string>("");
+  useEffect(() => {
+    // testFn();
+  }, []);
+  const testFn = async () => {
+    // getImageUrl 现在直接返回 URL，不需要 await
+    const imageUrl: string = await getImageUrl(
+      "bafybeicxumutydd4xqegz3bpgjiodhjxdv2o3s3q54uzaqwfxwqsgmeity"
+    );
+    console.log("=====图片 URL:", imageUrl);
+    // setImgURl(imageUrl);
+  };
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUploadPinataLoading(true);
     if (e.target.files && e.target.files[0]) {
       setImageFile(e.target.files[0]);
+      try {
+        const res: string = await uploadImageToPinata(e.target.files[0]);
+        console.log(res, "----上传图片成功");
+        setOpen(true);
+        setUploadPinataLoading(false);
+        setImgToken(res);
+      } catch (error) {
+        console.log(error, "----上传图片失败");
+        setUploadPinataLoading(false);
+      }
     }
   };
 
   const handleListNFT = () => {
-    console.log({ nftName, nftDescription, price, imageFile });
+    const params = {
+      nftName,
+      nftDescription,
+      price: ethers.parseEther(price),
+      imgToken,
+    };
+    console.log(params, "----params上传数据到ipfs");
   };
 
   return (
@@ -129,6 +169,7 @@ export default function WagmiPage() {
           <Button
             variant="outlined"
             component="label"
+            loading={uploadPinataLoading}
             sx={{
               color: "#666",
               borderColor: "#e0e0e0",
@@ -139,7 +180,7 @@ export default function WagmiPage() {
               },
             }}
           >
-            选择文件
+            选择图片
             <input
               type="file"
               hidden
@@ -153,6 +194,7 @@ export default function WagmiPage() {
           >
             {imageFile ? imageFile.name : "未选择任何文件"}
           </Typography>
+          <div>{uploadPinataLoading ? "uploading pinata... " : ""}</div>
         </Box>
 
         <Button
@@ -175,6 +217,22 @@ export default function WagmiPage() {
           List NFT
         </Button>
       </Card>
+      <Snackbar
+        open={open}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        autoHideDuration={1500}
+      >
+        <Alert
+          onClose={() => {
+            setOpen(false);
+          }}
+          severity="success"
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          上传图片成功
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }
