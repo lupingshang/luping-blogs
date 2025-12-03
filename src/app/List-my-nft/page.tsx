@@ -17,9 +17,13 @@ import {
 } from "@/utils/pinata";
 import { ethers } from "ethers";
 import { useRouter } from "next/navigation";
-import useContract from "@/hooks/contract";
+import { useWalletReconnect } from "@/hooks/useWalletReconnect";
+import nftAbi from "@/common/abi.json";
+import { useWalletStore } from "@/store/wallet";
 
+const contractAddress = "0x7487930938A719a495b688B7f1BC047A53ed720c";
 export default function ListNft() {
+  useWalletReconnect();
   const router = useRouter();
   //nft名称
   const [nftName, setNftName] = useState("");
@@ -36,10 +40,14 @@ export default function ListNft() {
   const [listBtnLoading, setlistBtnLoading] = useState<boolean>(false);
   //pinata返回图片cid
   const [imgToken, setImgToken] = useState<string>("");
+  //合约
+  const [contract, setContract] = useState<any>(null);
+  const { signer } = useWalletStore();
   //获取合约
-  const contract = useContract();
-  //获取合约
-
+  useEffect(() => {
+    const co = new ethers.Contract(contractAddress, nftAbi.abi, signer);
+    setContract(co);
+  }, []);
   // Snackbar 状态
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -78,11 +86,6 @@ export default function ListNft() {
     };
     try {
       const res = await uploadJsonToPinata(ntfData);
-      setSnackbar({
-        open: true,
-        message: "上传 Pinata 成功！",
-        severity: "success",
-      });
       // const json = await getJsonFromPinata(res);
       // console.log("拿到pinata的数据", json);
       return res;
@@ -100,14 +103,26 @@ export default function ListNft() {
       });
       return;
     }
+
+    if (!contract) {
+      setSnackbar({
+        open: true,
+        message: "Contract not initialized. Please connect wallet.",
+        severity: "error",
+      });
+      return;
+    }
+
     try {
       setlistBtnLoading(true);
+      console.log("contract---》", contract);
       const jsonData = await uploadjsonDataToPinata();
+      console.log("签名", signer);
 
       const priceInWei = ethers.parseEther(price);
       let listingPrice = await contract.getListPrice();
       listingPrice = listingPrice.toString();
-      console.log("contract", contract);
+
       const tx = await contract.createToken(jsonData, priceInWei, {
         value: listingPrice,
       });
@@ -126,6 +141,8 @@ export default function ListNft() {
       setImgToken("");
       setlistBtnLoading(false);
     } catch (error) {
+      console.log(error, "---error");
+
       setlistBtnLoading(false);
     }
   };
