@@ -16,14 +16,10 @@ import {
   uploadJsonToPinata,
 } from "@/utils/pinata";
 import { ethers } from "ethers";
-import { useWalletReconnect } from "@/hooks/useWalletReconnect";
-import { useWalletStore } from "@/store/wallet";
 import { useRouter } from "next/navigation";
-import nftAbi from "./abi.json";
-const contractAddress = "0x7487930938A719a495b688B7f1BC047A53ed720c";
+import useContract from "@/hooks/contract";
+
 export default function ListNft() {
-  //页面刷新获取sinner
-  useWalletReconnect();
   const router = useRouter();
   //nft名称
   const [nftName, setNftName] = useState("");
@@ -40,10 +36,9 @@ export default function ListNft() {
   const [listBtnLoading, setlistBtnLoading] = useState<boolean>(false);
   //pinata返回图片cid
   const [imgToken, setImgToken] = useState<string>("");
-  //合约实例
-  const [contract, setContract] = useState<any>(null);
-  //签名
-  const { signer } = useWalletStore();
+  //获取合约
+  const contract = useContract();
+  //获取合约
 
   // Snackbar 状态
   const [snackbar, setSnackbar] = useState({
@@ -51,15 +46,7 @@ export default function ListNft() {
     message: "",
     severity: "success" as "success" | "error" | "info" | "warning",
   });
-  useEffect(() => {
-    initContract();
-  }, []);
-  //初始化合约
-  const initContract = async () => {
-    //链接合约
-    const co = new ethers.Contract(contractAddress, nftAbi.abi, signer);
-    setContract(co);
-  };
+
   //上传图片到pinata
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setUploadPinataLoading(true);
@@ -105,32 +92,29 @@ export default function ListNft() {
   };
   //使用合约创建nft
   const handleListNFT = async () => {
-    // if (!nftName || !nftDescription || !price || !imgToken) {
-    //   setSnackbar({
-    //     open: true,
-    //     message: "Please fill in all fields",
-    //     severity: "warning",
-    //   });
-    //   return;
-    // }
+    if (!nftName || !nftDescription || !price || !imgToken) {
+      setSnackbar({
+        open: true,
+        message: "Please fill in all fields",
+        severity: "warning",
+      });
+      return;
+    }
     try {
       setlistBtnLoading(true);
-      //  const jsonData = await uploadjsonDataToPinata();
-      const jsonData =
-        "bafkreic53t7xfchrtnyqgf6zwgd6nybdqhbffsz2fwjx7ia5cbtnwi76fy";
+      const jsonData = await uploadjsonDataToPinata();
 
       const priceInWei = ethers.parseEther(price);
       let listingPrice = await contract.getListPrice();
       listingPrice = listingPrice.toString();
-      // console.log("priceInWei", priceInWei);
+      console.log("contract", contract);
       const tx = await contract.createToken(jsonData, priceInWei, {
         value: listingPrice,
       });
-
       await tx.wait();
       setSnackbar({
         open: true,
-        message: "NFT listed successfully",
+        message: "NFT listed success",
         severity: "success",
       });
       setTimeout(() => {
