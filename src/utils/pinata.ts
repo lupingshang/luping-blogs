@@ -61,14 +61,3 @@ export async function getImageUrl(cid: string): Promise<string> {
   //私有网关
   //   return `https://${process.env.NEXT_PUBLIC_PINATA_GATEWAY}/ipfs/${cid}`;
 }
-
-// 5. 从你的 Pinata 账户获取内容（仅限你上传的内容）
-export async function getMyPinataContent(cid: string): Promise<any> {
-  try {
-    const { data } = await pinata.gateways.get(cid);
-    return data;
-  } catch (error) {
-    console.error("Error fetching content from Pinata:", error);
-    throw error;
-  }
-}

@@ -9,230 +9,321 @@ import {
   Snackbar,
   Alert,
 } from "@mui/material";
-import { getImageUrl, uploadImageToPinata } from "@/utils/pinata";
+import {
+  getImageUrl,
+  getJsonFromPinata,
+  uploadImageToPinata,
+  uploadJsonToPinata,
+} from "@/utils/pinata";
 import { ethers } from "ethers";
-export default function WagmiPage() {
+import { useWalletReconnect } from "@/hooks/useWalletReconnect";
+import { useWalletStore } from "@/store/wallet";
+import { useRouter } from "next/navigation";
+import nftAbi from "./abi.json";
+const contractAddress = "0x7487930938A719a495b688B7f1BC047A53ed720c";
+export default function ListNft() {
+  //页面刷新获取sinner
+  useWalletReconnect();
+  const router = useRouter();
+  //nft名称
   const [nftName, setNftName] = useState("");
+  //nft描述
   const [nftDescription, setNftDescription] = useState("");
+  //价格
   const [price, setPrice] = useState("");
+  //图片信息
   const [imageFile, setImageFile] = useState<File | null>(null);
+  //上传图片loading
   const [uploadPinataLoading, setUploadPinataLoading] =
     useState<boolean>(false);
-  const [open, setOpen] = useState<boolean>(false);
+  //创建nft
+  const [listBtnLoading, setlistBtnLoading] = useState<boolean>(false);
+  //pinata返回图片cid
   const [imgToken, setImgToken] = useState<string>("");
+  //合约实例
+  const [contract, setContract] = useState<any>(null);
+  //签名
+  const { signer } = useWalletStore();
+
+  // Snackbar 状态
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success" as "success" | "error" | "info" | "warning",
+  });
   useEffect(() => {
-    // testFn();
+    initContract();
   }, []);
-  const testFn = async () => {
-    // getImageUrl 现在直接返回 URL，不需要 await
-    const imageUrl: string = await getImageUrl(
-      "bafybeicxumutydd4xqegz3bpgjiodhjxdv2o3s3q54uzaqwfxwqsgmeity"
-    );
-    console.log("=====图片 URL:", imageUrl);
-    // setImgURl(imageUrl);
+  //初始化合约
+  const initContract = async () => {
+    //链接合约
+    const co = new ethers.Contract(contractAddress, nftAbi.abi, signer);
+    setContract(co);
   };
+  //上传图片到pinata
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setUploadPinataLoading(true);
     if (e.target.files && e.target.files[0]) {
-      setImageFile(e.target.files[0]);
+      const file = e.target.files[0];
+      setImageFile(file);
       try {
         const res: string = await uploadImageToPinata(e.target.files[0]);
-        console.log(res, "----上传图片成功");
-        setOpen(true);
+        setSnackbar({
+          open: true,
+          message: "img upload success",
+          severity: "success",
+        });
         setUploadPinataLoading(false);
         setImgToken(res);
       } catch (error) {
-        console.log(error, "----上传图片失败");
         setUploadPinataLoading(false);
       }
     }
   };
-
-  const handleListNFT = () => {
-    const params = {
+  //上传json数据到pinata
+  const uploadjsonDataToPinata = async () => {
+    const priceInWei = ethers.parseEther(price);
+    const ntfData = {
       nftName,
       nftDescription,
-      price: ethers.parseEther(price),
+      price: priceInWei.toString(), // 将 BigInt 转换为字符串
       imgToken,
     };
-    console.log(params, "----params上传数据到ipfs");
+    try {
+      const res = await uploadJsonToPinata(ntfData);
+      setSnackbar({
+        open: true,
+        message: "上传 Pinata 成功！",
+        severity: "success",
+      });
+      // const json = await getJsonFromPinata(res);
+      // console.log("拿到pinata的数据", json);
+      return res;
+    } catch (error) {
+      setlistBtnLoading(false);
+    }
+  };
+  //使用合约创建nft
+  const handleListNFT = async () => {
+    // if (!nftName || !nftDescription || !price || !imgToken) {
+    //   setSnackbar({
+    //     open: true,
+    //     message: "Please fill in all fields",
+    //     severity: "warning",
+    //   });
+    //   return;
+    // }
+    try {
+      setlistBtnLoading(true);
+      //  const jsonData = await uploadjsonDataToPinata();
+      const jsonData =
+        "bafkreic53t7xfchrtnyqgf6zwgd6nybdqhbffsz2fwjx7ia5cbtnwi76fy";
+
+      const priceInWei = ethers.parseEther(price);
+      let listingPrice = await contract.getListPrice();
+      listingPrice = listingPrice.toString();
+      // console.log("priceInWei", priceInWei);
+      const tx = await contract.createToken(jsonData, priceInWei, {
+        value: listingPrice,
+      });
+
+      await tx.wait();
+      setSnackbar({
+        open: true,
+        message: "NFT listed successfully",
+        severity: "success",
+      });
+      setTimeout(() => {
+        router.push("/profile");
+      }, 500);
+      setNftName("");
+      setNftDescription("");
+      setPrice("");
+      setImgToken("");
+      setlistBtnLoading(false);
+    } catch (error) {
+      setlistBtnLoading(false);
+    }
   };
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        minHeight: "80vh",
-        p: 3,
-      }}
-    >
-      <Card
+    <>
+      <Box
         sx={{
-          maxWidth: 520,
-          width: "100%",
-          p: 4,
-          borderRadius: 3,
-          boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "80vh",
+          p: 3,
         }}
       >
-        <Typography
-          variant="h6"
+        <Card
           sx={{
-            textAlign: "center",
-            mb: 4,
-            color: "#764ba2",
+            maxWidth: 520,
+            width: "100%",
+            p: 4,
+            borderRadius: 3,
+            boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
           }}
         >
-          Upload your NFT to the marketplace
-        </Typography>
-
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle1" sx={{ mb: 1, color: "#764ba2" }}>
-            NFT Name
-          </Typography>
-          <TextField
-            fullWidth
-            value={nftName}
-            onChange={(e) => setNftName(e.target.value)}
-            placeholder="Wayne#001"
-            size="small"
-            sx={{
-              bgcolor: "#f0f4ff",
-              "& .MuiOutlinedInput-root": {
-                "& fieldset": { border: "none" },
-                "& input": { color: "#000" },
-              },
-            }}
-          />
-        </Box>
-
-        <Box sx={{ mb: 3 }}>
           <Typography
-            variant="subtitle1"
-            sx={{ mb: 1, color: "#764ba2", fontWeight: 500 }}
-          >
-            NFT Description
-          </Typography>
-          <TextField
-            fullWidth
-            multiline
-            rows={3}
-            value={nftDescription}
-            onChange={(e) => setNftDescription(e.target.value)}
-            placeholder="Wayne#001"
+            variant="h6"
             sx={{
-              bgcolor: "#ffffff",
-              "& .MuiOutlinedInput-root": {
-                "& fieldset": { borderColor: "#e0e0e0" },
-                "& textarea": { color: "#000" },
-              },
+              textAlign: "center",
+              mb: 4,
+              color: "#764ba2",
             }}
-          />
-        </Box>
+          >
+            Upload your NFT to the marketplace
+          </Typography>
 
-        <Box sx={{ mb: 3 }}>
-          <Typography
-            variant="subtitle1"
-            sx={{ mb: 1, color: "#764ba2", fontWeight: 500 }}
-          >
-            Price (in ETH)
-          </Typography>
-          <TextField
-            fullWidth
-            type="number"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            placeholder="0.01"
-            size="small"
-            slotProps={{
-              htmlInput: { step: "0.01", min: "0" },
-            }}
-            sx={{
-              bgcolor: "#ffffff",
-              "& .MuiOutlinedInput-root": {
-                "& fieldset": { borderColor: "#e0e0e0" },
-                "& input": { color: "#000" },
-              },
-            }}
-          />
-        </Box>
-
-        <Box sx={{ mb: 4 }}>
-          <Typography
-            variant="subtitle1"
-            sx={{ mb: 1, color: "#764ba2", fontWeight: 500 }}
-          >
-            Upload Image (&lt;500 KB)
-          </Typography>
-          <Button
-            variant="outlined"
-            component="label"
-            loading={uploadPinataLoading}
-            sx={{
-              color: "#666",
-              borderColor: "#e0e0e0",
-              textTransform: "none",
-              "&:hover": {
-                borderColor: "#764ba2",
-                bgcolor: "#f9f9f9",
-              },
-            }}
-          >
-            选择图片
-            <input
-              type="file"
-              hidden
-              accept="image/*"
-              onChange={handleFileChange}
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="subtitle1" sx={{ mb: 1, color: "#764ba2" }}>
+              NFT Name
+            </Typography>
+            <TextField
+              fullWidth
+              value={nftName}
+              onChange={(e) => setNftName(e.target.value)}
+              placeholder="Wayne#001"
+              size="small"
+              sx={{
+                bgcolor: "#f0f4ff",
+                "& .MuiOutlinedInput-root": {
+                  "& fieldset": { border: "none" },
+                  "& input": { color: "#000" },
+                },
+              }}
             />
-          </Button>
-          <Typography
-            variant="body2"
-            sx={{ ml: 2, display: "inline", color: "#999" }}
-          >
-            {imageFile ? imageFile.name : "未选择任何文件"}
-          </Typography>
-          <div>{uploadPinataLoading ? "uploading pinata... " : ""}</div>
-        </Box>
+          </Box>
 
-        <Button
-          fullWidth
-          variant="contained"
-          onClick={handleListNFT}
-          sx={{
-            bgcolor: "#a855f7",
-            color: "white",
-            py: 1.5,
-            fontSize: "1.1rem",
-            fontWeight: 600,
-            textTransform: "none",
-            borderRadius: 2,
-            "&:hover": {
-              bgcolor: "#9333ea",
-            },
-          }}
-        >
-          List NFT
-        </Button>
-      </Card>
+          <Box sx={{ mb: 3 }}>
+            <Typography
+              variant="subtitle1"
+              sx={{ mb: 1, color: "#764ba2", fontWeight: 500 }}
+            >
+              NFT Description
+            </Typography>
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              value={nftDescription}
+              onChange={(e) => setNftDescription(e.target.value)}
+              placeholder="Wayne#001"
+              sx={{
+                bgcolor: "#ffffff",
+                "& .MuiOutlinedInput-root": {
+                  "& fieldset": { borderColor: "#e0e0e0" },
+                  "& textarea": { color: "#000" },
+                },
+              }}
+            />
+          </Box>
+
+          <Box sx={{ mb: 3 }}>
+            <Typography
+              variant="subtitle1"
+              sx={{ mb: 1, color: "#764ba2", fontWeight: 500 }}
+            >
+              Price (in ETH)
+            </Typography>
+            <TextField
+              fullWidth
+              type="number"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="0.01"
+              size="small"
+              slotProps={{
+                htmlInput: { step: "0.01", min: "0" },
+              }}
+              sx={{
+                bgcolor: "#ffffff",
+                "& .MuiOutlinedInput-root": {
+                  "& fieldset": { borderColor: "#e0e0e0" },
+                  "& input": { color: "#000" },
+                },
+              }}
+            />
+          </Box>
+
+          <Box sx={{ mb: 4 }}>
+            <Typography
+              variant="subtitle1"
+              sx={{ mb: 1, color: "#764ba2", fontWeight: 500 }}
+            >
+              Upload Image (&lt;1000 KB)
+            </Typography>
+            <Button
+              variant="outlined"
+              component="label"
+              loading={uploadPinataLoading}
+              sx={{
+                color: "#666",
+                borderColor: "#e0e0e0",
+                textTransform: "none",
+                "&:hover": {
+                  borderColor: "#764ba2",
+                  bgcolor: "#f9f9f9",
+                },
+              }}
+            >
+              选择图片
+              <input
+                type="file"
+                hidden
+                accept="image/*"
+                onChange={handleFileChange}
+              />
+            </Button>
+            <Typography
+              variant="body2"
+              sx={{ ml: 2, display: "inline", color: "#999" }}
+            >
+              {imageFile ? imageFile.name : "未选择任何文件"}
+            </Typography>
+            <div>{uploadPinataLoading ? "uploading pinata... " : ""}</div>
+          </Box>
+
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={handleListNFT}
+            loading={listBtnLoading}
+            sx={{
+              bgcolor: "#a855f7",
+              color: "white",
+              py: 1.5,
+              fontSize: "1.1rem",
+              fontWeight: 600,
+              textTransform: "none",
+              borderRadius: 2,
+              "&:hover": {
+                bgcolor: "#9333ea",
+              },
+            }}
+          >
+            List NFT
+          </Button>
+        </Card>
+      </Box>
+
+      {/* Snackbar 提示 */}
       <Snackbar
-        open={open}
+        open={snackbar.open}
+        autoHideDuration={1000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
-        autoHideDuration={1500}
       >
         <Alert
-          onClose={() => {
-            setOpen(false);
-          }}
-          severity="success"
-          variant="filled"
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
           sx={{ width: "100%" }}
         >
-          上传图片成功
+          {snackbar.message}
         </Alert>
       </Snackbar>
-    </Box>
+    </>
   );
 }
