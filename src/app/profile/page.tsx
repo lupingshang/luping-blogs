@@ -25,6 +25,11 @@ export default function Profile() {
             nftAbi.abi,
             signer
           );
+          // ****重要链路 核心
+          //1.拿到nft信息
+          //2.拿到对应tokenid
+          //4.拿到tokenurl
+          //5.拿到mate拿到pinata数据
           const mynfts = await contract.getMyNFTs();
 
           // 将 Proxy 对象转换为普通数组并获取完整数据

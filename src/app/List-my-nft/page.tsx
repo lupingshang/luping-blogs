@@ -103,7 +103,6 @@ export default function ListNft() {
       });
       return;
     }
-
     if (!contract) {
       setSnackbar({
         open: true,
@@ -122,7 +121,7 @@ export default function ListNft() {
       const priceInWei = ethers.parseEther(price);
       let listingPrice = await contract.getListPrice();
       listingPrice = listingPrice.toString();
-
+      //TODO 后面多了对象这个参数
       const tx = await contract.createToken(jsonData, priceInWei, {
         value: listingPrice,
       });
