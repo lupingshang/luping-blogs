@@ -7,6 +7,7 @@ import nftAbi from "@/common/abi.json";
 import { useWalletReconnect } from "@/hooks/useWalletReconnect";
 import NftFile from "@/components/NftFile";
 import { nftProxyToArray } from "@/utils/common";
+// TODO env判断链 chinid
 const contractAddress = "0x7487930938A719a495b688B7f1BC047A53ed720c";
 export default function Profile() {
   useWalletReconnect();

@@ -1,5 +1,5 @@
 "use client";
-import { useParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ethers } from "ethers";
 import { Box, Card, Typography, Button, CircularProgress } from "@mui/material";
@@ -13,9 +13,9 @@ const contractAddress = "0x7487930938A719a495b688B7f1BC047A53ed720c";
 
 export default function nftPage() {
   useWalletReconnect();
-  const params = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const id = params?.id as string;
+  const id = searchParams.get("tokenId") as string;
   const { signer } = useWalletStore();
 
   const [nft, setNft] = useState<any>(null);

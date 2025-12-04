@@ -123,7 +123,7 @@ export default function ListNft() {
       listingPrice = listingPrice.toString();
       //TODO 后面多了对象这个参数
       const tx = await contract.createToken(jsonData, priceInWei, {
-        value: listingPrice,
+        value: listingPrice, //原生代币
       });
       await tx.wait();
       setSnackbar({

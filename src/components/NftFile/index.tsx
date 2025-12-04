@@ -3,7 +3,7 @@ export default function NftFile({ nfts }: any) {
   return (
     <>
       {nfts.map((nft: any) => (
-        <Link href={`/nftPage/${nft.tokenId}`}>
+        <Link href={`/nftPage?tokenId=${nft.tokenId}`}>
           <div
             key={nft.tokenId}
             style={{
@@ -14,7 +14,7 @@ export default function NftFile({ nfts }: any) {
           >
             {nft.image && (
               <img
-                src={`https://gateway.pinata.cloud/ipfs/${nft.image}`}
+                src={`https://ipfs.io/ipfs/${nft.image}`}
                 alt={nft.name}
                 style={{
                   width: "100%",

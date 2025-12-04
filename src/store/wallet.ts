@@ -26,6 +26,7 @@ export const useWalletStore = create<UserState>()(
       reconnectWallet: async () => {
         try {
           if (typeof window !== "undefined" && window.ethereum) {
+            //todo. 判断链
             const provider = new ethers.BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();
             set({ signer });
