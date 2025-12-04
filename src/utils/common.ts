@@ -29,6 +29,7 @@ export async function nftProxyToArray(mynfts: any, contract: any) {
         name: metadata?.nftName || "Unknown",
         description: metadata?.nftDescription || "",
         image: metadata?.imgToken || "",
+        thumImage: metadata?.thumImgToken || "",
       };
     })
   );

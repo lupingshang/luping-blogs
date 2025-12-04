@@ -1,18 +1,24 @@
 "use client";
 import { useEffect, useState } from "react";
 import { ethers } from "ethers";
-import { getJsonFromPinata } from "@/utils/pinata";
 import { useWalletStore } from "@/store/wallet";
 import nftAbi from "@/common/abi.json";
 import { useWalletReconnect } from "@/hooks/useWalletReconnect";
 import NftFile from "@/components/NftFile";
 import { nftProxyToArray } from "@/utils/common";
-const contractAddress = "0x7487930938A719a495b688B7f1BC047A53ed720c";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+
+const contractAddress = "0xeCC1F28e7dc83D4430FeDEfd1A2605441AD1A731";
+
 export default function Marketplace() {
   useWalletReconnect();
   const { signer } = useWalletStore();
   const [nfts, setNfts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // 使用懒加载 Hook，初始显示 10 条，每次加载 10 条
+  const { displayedItems, isLoading, hasMore, displayCount, totalCount } =
+    useInfiniteScroll(nfts, 10, 10);
 
   useEffect(() => {
     let isMounted = true;
@@ -50,7 +56,7 @@ export default function Marketplace() {
 
   return (
     <div style={{ padding: "20px" }}>
-      <h1 className="mb-2">My NFTs ({nfts.length})</h1>
+      <h1 className="mb-2">My NFTs ({displayedItems.length})</h1>
       <div
         style={{
           display: "grid",
@@ -58,8 +64,22 @@ export default function Marketplace() {
           gap: "20px",
         }}
       >
-        <NftFile nfts={nfts} />
+        <NftFile nfts={displayedItems} />
       </div>
+
+      {/* 加载状态 */}
+      {isLoading && (
+        <div style={{ textAlign: "center", padding: "20px" }}>
+          <p>加载中...</p>
+        </div>
+      )}
+
+      {/* 全部加载完成提示 */}
+      {!hasMore && totalCount > 0 && (
+        <div style={{ textAlign: "center", padding: "20px", color: "#999" }}>
+          <p>已加载全部 {displayedItems.length} 条数据</p>
+        </div>
+      )}
     </div>
   );
 }

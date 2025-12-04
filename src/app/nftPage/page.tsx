@@ -10,7 +10,38 @@ import { useWalletReconnect } from "@/hooks/useWalletReconnect";
 import { useRouter } from "next/navigation";
 
 const contractAddress = "0x7487930938A719a495b688B7f1BC047A53ed720c";
+function NftImage({ nft }: any) {
+  const [imageSrc, setImageSrc] = useState(
+    `https://ipfs.io/ipfs/${nft.thumImage}`
+  );
+  const [isHighRes, setIsHighRes] = useState(false);
 
+  useEffect(() => {
+    // 预加载原图
+    const img = new Image();
+    img.src = `https://ipfs.io/ipfs/${nft.image}`;
+    img.onload = () => {
+      console.log("原图加载完成");
+      setImageSrc(img.src);
+      setIsHighRes(true);
+    };
+  }, [nft.image]);
+
+  return (
+    <img
+      src={imageSrc}
+      alt={nft.name}
+      style={{
+        width: "100%",
+        height: "200px",
+        objectFit: "cover",
+        borderRadius: "4px",
+        filter: isHighRes ? "none" : "blur(2px)",
+        transition: "filter 0.3s ease-in-out",
+      }}
+    />
+  );
+}
 export default function nftPage() {
   useWalletReconnect();
   const searchParams = useSearchParams();
@@ -124,19 +155,7 @@ export default function nftPage() {
       >
         {/* 左侧：图片 */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          {nft.image && (
-            <img
-              src={`https://gateway.pinata.cloud/ipfs/${nft.image}`}
-              alt={nft.name}
-              style={{
-                width: "100%",
-                height: "auto",
-                maxHeight: "600px",
-                objectFit: "contain",
-                borderRadius: "12px",
-              }}
-            />
-          )}
+          {nft.image && <NftImage nft={nft} />}
         </Box>
 
         {/* 右侧：详情 */}

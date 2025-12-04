@@ -40,6 +40,8 @@ export default function ListNft() {
   const [listBtnLoading, setlistBtnLoading] = useState<boolean>(false);
   //pinata返回图片cid
   const [imgToken, setImgToken] = useState<string>("");
+  //返回缩略图 cid
+  const [thumImgToken, setThumImgToken] = useState<string>("");
   //合约
   const [contract, setContract] = useState<any>(null);
   const { signer } = useWalletStore();
@@ -54,7 +56,42 @@ export default function ListNft() {
     message: "",
     severity: "success" as "success" | "error" | "info" | "warning",
   });
+  // 上传时生成缩略图
+  const generateThumbnail = (file: File): Promise<Blob> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d")!;
 
+      img.onload = () => {
+        // 设置缩略图尺寸
+        const maxWidth = 300;
+        const maxHeight = 300;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height *= maxWidth / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width *= maxHeight / height;
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob((blob) => resolve(blob!), "image/jpeg", 0.7);
+      };
+
+      img.src = URL.createObjectURL(file);
+    });
+  };
   //上传图片到pinata
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setUploadPinataLoading(true);
@@ -62,14 +99,20 @@ export default function ListNft() {
       const file = e.target.files[0];
       setImageFile(file);
       try {
-        const res: string = await uploadImageToPinata(e.target.files[0]);
+        const thumbnailBlob = await generateThumbnail(file);
+        const thumbnailFile = new File([thumbnailBlob], file.name, {
+          type: "image/jpeg",
+        });
+        const imgtoken: string = await uploadImageToPinata(e.target.files[0]);
+        const thumbToken: string = await uploadImageToPinata(thumbnailFile);
         setSnackbar({
           open: true,
           message: "img upload success",
           severity: "success",
         });
         setUploadPinataLoading(false);
-        setImgToken(res);
+        setImgToken(imgtoken);
+        setThumImgToken(thumbToken);
       } catch (error) {
         setUploadPinataLoading(false);
       }
@@ -83,6 +126,7 @@ export default function ListNft() {
       nftDescription,
       price: priceInWei.toString(), // 将 BigInt 转换为字符串
       imgToken,
+      thumImgToken,
     };
     try {
       const res = await uploadJsonToPinata(ntfData);
@@ -116,8 +160,6 @@ export default function ListNft() {
       setlistBtnLoading(true);
       console.log("contract---》", contract);
       const jsonData = await uploadjsonDataToPinata();
-      console.log("签名", signer);
-
       const priceInWei = ethers.parseEther(price);
       let listingPrice = await contract.getListPrice();
       listingPrice = listingPrice.toString();
