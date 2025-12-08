@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactCompiler: true,
   // 优化配置
+  output: "export",
   experimental: {
     optimizePackageImports: ["@mui/material", "@mui/icons-material"],
   },
