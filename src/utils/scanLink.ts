@@ -1,5 +1,5 @@
 const { ethers } = require("ethers");
-
+//扫链程序示例：监听以太坊区块链上的交易并解析交易信息
 // 1. 配置 Provider（连接到以太坊网络）
 // 这里使用 Infura 的 RPC 地址作为示例，你需要替换成自己的
 const provider = new ethers.providers.JsonRpcProvider(
