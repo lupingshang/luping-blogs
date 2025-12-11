@@ -91,6 +91,13 @@ export default function Sidebar() {
       path: "/profile",
       children: [],
     },
+    {
+      key: "cex",
+      text: "Cex",
+      icon: <ShoppingCart />,
+      path: "/cex",
+      children: [],
+    },
   ];
 
   return (
