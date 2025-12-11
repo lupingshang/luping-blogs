@@ -305,7 +305,7 @@ const TvChart: React.FC<TvChartProps> = ({
   return (
     <div
       id="tv_chart_container"
-      style={{ width: "100%", height: "56%", margin: "auto" }}
+      style={{ width: "100%", height: "100%", margin: "auto" }}
     />
   );
 };

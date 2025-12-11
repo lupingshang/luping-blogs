@@ -82,7 +82,7 @@ export default function CexPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0b0e11] text-white">
+    <div className=" text-white">
       {/* 头部 */}
       <div className="bg-[#161a1e] border-b border-[#2a2e39]">
         <h1 className="text-white text-center py-5 text-2xl font-bold">
@@ -157,7 +157,7 @@ export default function CexPage() {
               图表库，支持多种时间周期、技术指标和绘图工具
             </p>
           </div>
-          <div className="h-[800px] md:h-[600px] lg:h-[800px] rounded overflow-hidden">
+          <div className="h-130">
             <TvChart symbol={currentCoin.symbol} />
           </div>
         </div>

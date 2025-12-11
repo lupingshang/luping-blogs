@@ -81,7 +81,7 @@ export default function Content({ children }: { children: React.ReactNode }) {
           </div>
         )}
       </div>
-      <div className="p-2">{children}</div>
+      <div className="h-screen overflow-y-auto p-2">{children}</div>
     </Box>
   );
 }
