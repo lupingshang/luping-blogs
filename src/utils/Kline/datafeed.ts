@@ -1,3 +1,24 @@
+/**
+ * TradingView DataFeed 数据源实现
+ *
+ * 🔄 方法调用流程：
+ * 1. onReady() - TradingView初始化时调用，返回数据源配置
+ * 2. resolveSymbol() - 解析交易对信息，返回交易对元数据
+ * 3. getBars() - 获取历史K线数据，用于图表初始显示
+ * 4. subscribeBars() - 订阅实时数据，建立WebSocket连接
+ * 5. [实时数据推送] - 通过onRealtimeCallback更新图表
+ * 6. unsubscribeBars() - 取消订阅，清理资源
+ *
+ * 📊 数据流向：
+ * 后台API/WebSocket → DataFeed适配器 → TradingView图表库 → 用户界面
+ *
+ * 🎯 核心职责：
+ * - 统一数据接口：将不同数据源的格式转换为TradingView标准格式
+ * - 管理数据连接：处理HTTP请求和WebSocket连接
+ * - 缓存管理：缓存最新数据用于实时更新对比
+ * - 错误处理：网络异常、数据异常的处理和重试
+ */
+
 //datafeed.ts
 import type {
   HistoryCallback,
@@ -126,6 +147,27 @@ export default class DefinedDataFeed
       this.options.DatafeedConfiguration = configurationData;
     }
   }
+  /**
+   * onReady() - 数据源初始化配置方法
+   *
+   * 🎯 作用：
+   * - TradingView库初始化时第一个调用的方法
+   * - 返回数据源的基本配置信息，告诉TradingView这个数据源支持什么功能
+   *
+   * 📋 主要配置项：
+   * - supported_resolutions: 支持的时间周期 ['1', '5', '15', '1H', '1D'等]
+   * - exchanges: 支持的交易所列表 [Binance, OKX等]
+   * - symbols_types: 支持的交易对类型 [crypto, forex等]
+   * - supports_marks: 是否支持图表标记
+   * - supports_search: 是否支持交易对搜索
+   * - supports_time: 是否支持时间相关功能
+   *
+   * 🔄 调用时机：
+   * - TradingView widget创建时自动调用
+   * - 必须调用callback返回配置，否则图表无法初始化
+   *
+   * 💡 重要性：这是数据源的"身份证"，决定了TradingView能使用哪些功能
+   */
   public async onReady(callback: OnReadyCallback): Promise<void> {
     console.log("[onReady]: Method call");
     setTimeout(() => callback(configurationData));
@@ -147,6 +189,34 @@ export default class DefinedDataFeed
     onResultReadyCallback(newSymbols);
   }
 
+  /**
+   * resolveSymbol() - 交易对信息解析方法
+   *
+   * 🎯 作用：
+   * - 根据交易对名称(如"BTCUSDT")解析出详细的交易对信息
+   * - 返回交易对的元数据，包括价格精度、交易时间、支持的功能等
+   *
+   * 📊 返回的关键信息：
+   * - ticker: 交易对代码 (BTCUSDT)
+   * - name: 显示名称 (BTC/USDT)
+   * - pricescale: 价格精度 (100000000 = 8位小数)
+   * - minmov: 最小变动单位 (1)
+   * - session: 交易时间 ("24x7" = 24小时交易)
+   * - timezone: 时区 ("Etc/UTC")
+   * - has_intraday: 是否支持分钟级数据
+   * - supported_resolutions: 支持的时间周期
+   * - data_status: 数据状态 ("streaming" = 实时流数据)
+   *
+   * 🔄 调用时机：
+   * - 用户选择交易对时
+   * - 切换交易对时
+   * - 图表初始化时
+   *
+   * ⚠️ 注意：
+   * - 必须调用onResolve返回symbolInfo，否则图表无法加载
+   * - 如果交易对不存在，必须调用onError
+   * - pricescale决定了价格显示的小数位数
+   */
   public async resolveSymbol(
     symbolName: string,
     onResolve: ResolveCallback,
@@ -186,6 +256,46 @@ export default class DefinedDataFeed
     onResolve(symbolInfo as TradingView.LibrarySymbolInfo);
   }
 
+  /**
+   * getBars() - 获取历史K线数据方法
+   *
+   * 🎯 作用：
+   * - 获取指定时间范围内的历史K线数据
+   * - 这是图表显示的核心数据来源
+   * - 支持不同时间周期的数据请求(1分钟、1小时、1天等)
+   *
+   * 📥 输入参数：
+   * - symbolInfo: 交易对信息(来自resolveSymbol)
+   * - resolution: 时间周期('1', '5', '15', '1H', '1D'等)
+   * - periodParams: 时间范围参数
+   *   - from: 开始时间戳(秒)
+   *   - to: 结束时间戳(秒)
+   *   - firstDataRequest: 是否首次请求
+   *
+   * 📤 返回数据格式：
+   * - time: 时间戳(毫秒)
+   * - open: 开盘价
+   * - high: 最高价
+   * - low: 最低价
+   * - close: 收盘价
+   * - volume: 成交量
+   *
+   * 🔄 调用时机：
+   * - 图表初始化时获取初始数据
+   * - 用户缩放图表时获取更多历史数据
+   * - 切换时间周期时重新获取数据
+   * - 用户滚动到历史区域时分页加载
+   *
+   * 💾 缓存机制：
+   * - firstDataRequest=true时，缓存最新的K线数据到lastBarsCache
+   * - 缓存用于实时数据更新时的基准对比
+   *
+   * ⚠️ 重要：
+   * - 必须调用onResolve返回数据数组，即使是空数组
+   * - 无数据时设置{noData: true}
+   * - 数据必须按时间正序排列
+   * - 时间戳必须是毫秒级别
+   */
   public async getBars(
     symbolInfo: LibrarySymbolInfo,
     resolution: ResolutionString,
@@ -262,6 +372,47 @@ export default class DefinedDataFeed
     }
   }
 
+  /**
+   * subscribeBars() - 订阅实时K线数据更新方法
+   *
+   * 🎯 作用：
+   * - 订阅指定交易对的实时K线数据推送
+   * - 建立WebSocket连接或其他实时数据通道
+   * - 当有新的K线数据时，自动更新图表显示
+   *
+   * 📥 输入参数：
+   * - symbolInfo: 交易对信息
+   * - resolution: 时间周期
+   * - onRealtimeCallback: 实时数据回调函数
+   *   - TradingView提供的回调，用于更新图表
+   *   - 接收新的K线数据并触发图表重绘
+   * - subscriberUID: 订阅者唯一标识
+   *   - 用于管理多个订阅，支持取消特定订阅
+   * - onResetCacheNeededCallback: 缓存重置回调
+   *   - 当数据不连续时调用，清空图表缓存
+   *
+   * 🔄 工作流程：
+   * 1. 建立WebSocket连接到数据源
+   * 2. 发送订阅消息(交易对+时间周期)
+   * 3. 接收实时推送数据
+   * 4. 数据格式转换和验证
+   * 5. 调用onRealtimeCallback更新图表
+   *
+   * 📊 实时数据处理：
+   * - 增量更新：只更新当前K线的最新价格
+   * - 新K线：时间周期结束时创建新的K线
+   * - 数据校验：确保时间连续性和数据完整性
+   *
+   * 💾 缓存管理：
+   * - 使用lastBarsCache中的最新K线作为基准
+   * - 对比新数据判断是更新还是新增K线
+   *
+   * ⚠️ 重要：
+   * - 必须保存subscriberUID用于后续取消订阅
+   * - 实时数据格式必须与getBars返回格式一致
+   * - 处理网络断线重连逻辑
+   * - 避免重复订阅同一个交易对
+   */
   public subscribeBars(
     symbolInfo: LibrarySymbolInfo,
     resolution: ResolutionString,
@@ -285,6 +436,43 @@ export default class DefinedDataFeed
     );
   }
 
+  /**
+   * unsubscribeBars() - 取消订阅实时K线数据方法
+   *
+   * 🎯 作用：
+   * - 取消指定的实时数据订阅
+   * - 清理WebSocket连接和相关资源
+   * - 停止接收和处理实时数据推送
+   *
+   * 📥 输入参数：
+   * - subscriberUID: 订阅者唯一标识
+   *   - 与subscribeBars中的UID对应
+   *   - 用于精确取消特定的订阅
+   *
+   * 🔄 调用时机：
+   * - 用户切换到其他交易对时
+   * - 用户关闭图表页面时
+   * - 组件卸载时(React useEffect cleanup)
+   * - 切换时间周期时(先取消旧订阅，再建立新订阅)
+   * - 发生错误需要重新订阅时
+   *
+   * 🧹 清理工作：
+   * - 从订阅列表中移除对应的订阅记录
+   * - 关闭WebSocket连接(如果没有其他订阅)
+   * - 清理定时器和事件监听器
+   * - 释放内存中的缓存数据
+   *
+   * 🔧 资源管理：
+   * - 支持多订阅管理：一个数据源可能同时订阅多个交易对
+   * - 引用计数：只有当所有订阅都取消时才关闭连接
+   * - 防止内存泄漏：确保所有相关资源都被正确释放
+   *
+   * ⚠️ 重要：
+   * - 必须正确处理subscriberUID，避免取消错误的订阅
+   * - 确保WebSocket连接被正确关闭
+   * - 处理并发取消订阅的情况
+   * - 在组件卸载时必须调用此方法防止内存泄漏
+   */
   public unsubscribeBars(subscriberUID: string): void {
     console.log(
       "[unsubscribeBars]: Method call with subscriberUID:",

@@ -71,6 +71,8 @@ var MockWebsockFeed = function (url, coin, stompClient, scale) {
 };
 
 MockWebsockFeed.prototype.onReady = function (callback) {
+  console.log("🚀 onReady 方法被调用了!");
+
   var config = {};
   config.exchanges = [];
   config.supported_resolutions = [
@@ -90,7 +92,10 @@ MockWebsockFeed.prototype.onReady = function (callback) {
   config.supports_time = true;
   config.supports_timescale_marks = false;
 
+  console.log("📋 onReady 配置:", config);
+
   setTimeout(function () {
+    console.log("✅ onReady 回调执行");
     callback(config);
   }, 0);
 };
@@ -127,6 +132,8 @@ MockWebsockFeed.prototype.resolveSymbol = function (
   onSymbolResolvedCallback,
   onResolveErrorCallback
 ) {
+  console.log("🔍 resolveSymbol 方法被调用了! symbolName:", symbolName);
+
   var data = {
     name: this.coin.symbol,
     "exchange-traded": "",
@@ -155,7 +162,10 @@ MockWebsockFeed.prototype.resolveSymbol = function (
     timezone: "Asia/Shanghai",
   };
 
+  console.log("📊 resolveSymbol 数据:", data);
+
   setTimeout(function () {
+    console.log("✅ resolveSymbol 回调执行");
     onSymbolResolvedCallback(data);
   }, 0);
 };

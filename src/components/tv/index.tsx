@@ -85,6 +85,10 @@ const TvChart: React.FC<TvChartProps> = ({
   }, [theme]);
 
   const getKline = (data?: any) => {
+    // 检查TradingView是否加载
+    console.log("TradingView对象:", window.TradingView);
+    console.log("TradingView.widget:", window.TradingView?.widget);
+
     // 使用模拟数据，不需要真实的WebSocket连接
     const mockData = {
       a: "mock://market",
@@ -96,6 +100,14 @@ const TvChart: React.FC<TvChartProps> = ({
     const { a, b, c, d } = mockData;
     setDataParam(mockData);
     const newDatafeed = new Datafeeds.WebsockFeed(a, b, c, d);
+    console.log("k线图 数据---》", newDatafeed);
+
+    // 添加调试：检查数据源方法
+    console.log("数据源方法检查:");
+    console.log("- onReady:", typeof newDatafeed.onReady);
+    console.log("- resolveSymbol:", typeof newDatafeed.resolveSymbol);
+    console.log("- getBars:", typeof newDatafeed.getBars);
+    console.log("- subscribeBars:", typeof newDatafeed.subscribeBars);
 
     const config = {
       autosize: true,
@@ -225,9 +237,14 @@ const TvChart: React.FC<TvChartProps> = ({
     }
 
     if (window.TradingView) {
+      console.log("开始创建TradingView widget...");
+      console.log("配置对象:", config);
+
       window.tvWidget = new window.TradingView.widget(config);
+      console.log("TradingView widget创建完成:", window.tvWidget);
 
       window.tvWidget.onChartReady(() => {
+        console.log("TradingView图表准备完成!");
         const widget = window.tvWidget;
 
         widget.chart().executeActionById("drawingToolbarAction");
@@ -291,15 +308,22 @@ const TvChart: React.FC<TvChartProps> = ({
   useEffect(() => {
     // 初始化图表
     const initChart = () => {
-      if (window.TradingView) {
+      console.log("检查TradingView加载状态...");
+      console.log("window.TradingView:", !!window.TradingView);
+      console.log("window.TradingView.widget:", !!window.TradingView?.widget);
+
+      if (window.TradingView && window.TradingView.widget) {
+        console.log("TradingView已加载，开始初始化图表");
         getKline();
       } else {
+        console.log("TradingView未加载，100ms后重试...");
         // 如果TradingView还没加载，等待一下再试
         setTimeout(initChart, 100);
       }
     };
 
-    initChart();
+    // 延迟一点时间确保DOM和脚本都加载完成
+    setTimeout(initChart, 500);
   }, [symbol, interval, type]);
 
   return (
