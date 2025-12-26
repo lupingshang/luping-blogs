@@ -2,19 +2,21 @@
 import { useEffect, useState } from "react";
 import { ethers } from "ethers";
 import { useWalletStore } from "@/store/wallet";
-import nftAbi from "@/common/abi.json";
 import { useWalletReconnect } from "@/hooks/useWalletReconnect";
 import NftFile from "@/components/NftFile";
 import { nftProxyToArray } from "@/utils/common";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import type { Abi } from "@/types/generated";
+import type { ProcessedNFT } from "@/utils/common";
+import { Abi__factory } from "@/types/generated";
 
-const contractAddress = "0xeCC1F28e7dc83D4430FeDEfd1A2605441AD1A731";
+const contractAddress = "0xeCC1F28e7dc83D4430FeDEfd1A2605441AD1A731" as const;
 
 export default function Marketplace() {
   useWalletReconnect();
   const { signer } = useWalletStore();
-  const [nfts, setNfts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [nfts, setNfts] = useState<ProcessedNFT[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
 
   // 使用懒加载 Hook，初始显示 10 条，每次加载 10 条
   const { displayedItems, isLoading, hasMore, displayCount, totalCount } =
@@ -22,29 +24,46 @@ export default function Marketplace() {
 
   useEffect(() => {
     let isMounted = true;
-    const fetchNFTs = async () => {
-      if (signer && isMounted) {
-        try {
-          setLoading(true);
-          const contract = new ethers.Contract(
-            contractAddress,
-            nftAbi.abi,
-            signer
-          );
-          const mynfts = await contract.getAllNFTs();
 
-          // 将 Proxy 对象转换为普通数组并获取完整数据
-          const nftArray = await nftProxyToArray(mynfts, contract);
+    const fetchNFTs = async (): Promise<void> => {
+      if (!signer || !isMounted) return;
 
-          console.log("完整的 NFT 数据:", nftArray);
-          setNfts(nftArray);
-        } catch (error) {
-          console.error("获取 NFT 失败:", error);
-        } finally {
-          setLoading(false);
+      try {
+        setLoading(true);
+
+        // 🚀 使用TypeChain生成的类型安全合约
+        const contract: Abi = Abi__factory.connect(contractAddress, signer);
+
+        // 🔒 完全类型安全的合约调用
+        const mynfts = await contract.getAllNFTs();
+
+        // 验证返回数据的类型
+        if (!Array.isArray(mynfts)) {
+          throw new Error("getAllNFTs 返回的数据格式不正确");
         }
+
+        // 将 Proxy 对象转换为普通数组并获取完整数据
+        const nftArray = await nftProxyToArray(
+          mynfts,
+          contract as unknown as ethers.Contract
+        );
+
+        console.log("完整的 NFT 数据:", nftArray);
+        setNfts(nftArray);
+      } catch (error) {
+        console.error("获取 NFT 失败:", error);
+
+        // 类型安全的错误处理
+        if (error instanceof Error) {
+          console.error("错误详情:", error.message);
+        } else {
+          console.error("未知错误:", error);
+        }
+      } finally {
+        setLoading(false);
       }
     };
+
     fetchNFTs();
 
     return () => {
