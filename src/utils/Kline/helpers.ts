@@ -3,7 +3,12 @@ export async function makeApiRequest(path: string) {
   try {
     console.log("makeApiRequest", path);
     const url = new URL(`https://min-api.cryptocompare.com/${path}`);
-    url.searchParams.append("api_key", import.meta.env.VITE_API_KEY);
+    // 在 Next.js 中使用 process.env
+    const apiKey =
+      process.env.NEXT_PUBLIC_VITE_API_KEY || process.env.VITE_API_KEY;
+    if (apiKey) {
+      url.searchParams.append("api_key", apiKey);
+    }
     const response = await fetch(url.toString());
     return response.json();
   } catch (error) {

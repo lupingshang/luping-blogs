@@ -1,11 +1,10 @@
 // streaming.ts
 
-import type {
-  LibrarySymbolInfo,
-  ResolutionString,
-  SubscribeBarsCallback,
-  Bar,
-} from "public/charting_library/charting_library";
+// 使用全局类型定义
+type LibrarySymbolInfo = TradingView.LibrarySymbolInfo;
+type ResolutionString = TradingView.ResolutionString;
+type SubscribeBarsCallback = (bar: TradingView.Bar) => void;
+type Bar = TradingView.Bar;
 
 const socket = new WebSocket("wss://data-stream.binance.vision/ws");
 const channelToSubscription = new Map();

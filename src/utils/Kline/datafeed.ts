@@ -20,17 +20,113 @@
  */
 
 //datafeed.ts
-import type {
-  HistoryCallback,
-  LibrarySymbolInfo,
-  OnReadyCallback,
-  PeriodParams,
-  ResolutionString,
-  ResolveCallback,
-  SearchSymbolsCallback,
-  SubscribeBarsCallback,
-  SymbolResolveExtension,
-} from "public/charting_library/charting_library";
+
+// TradingView 类型定义
+declare global {
+  namespace TradingView {
+    interface DatafeedConfiguration {
+      supported_resolutions: ResolutionString[];
+      exchanges?: Exchange[];
+      symbols_types?: SymbolType[];
+    }
+
+    interface Exchange {
+      value: string;
+      name: string;
+      desc: string;
+    }
+
+    interface SymbolType {
+      name: string;
+      value: string;
+    }
+
+    type ResolutionString = string;
+
+    interface LibrarySymbolInfo {
+      ticker: string;
+      name: string;
+      description: string;
+      type: string;
+      session: string;
+      timezone: string;
+      exchange: string;
+      minmov: number;
+      pricescale: number;
+      has_intraday: boolean;
+      has_daily: boolean;
+      has_weekly_and_monthly: boolean;
+      visible_plots_set: string;
+      supported_resolutions: ResolutionString[];
+      volume_precision: number;
+      data_status: string;
+      full_name: string;
+    }
+
+    interface Bar {
+      time: number;
+      open: number;
+      high: number;
+      low: number;
+      close: number;
+      volume: number;
+    }
+
+    interface IExternalDatafeed {
+      onReady(callback: OnReadyCallback): void;
+      searchSymbols(
+        userInput: string,
+        exchange: string,
+        symbolType: string,
+        onResultReadyCallback: SearchSymbolsCallback
+      ): void;
+      resolveSymbol(
+        symbolName: string,
+        onResolve: ResolveCallback,
+        onError: ErrorCallback,
+        extension?: SymbolResolveExtension
+      ): void;
+    }
+
+    interface IDatafeedChartApi {
+      getBars(
+        symbolInfo: LibrarySymbolInfo,
+        resolution: ResolutionString,
+        periodParams: PeriodParams,
+        onResolve: HistoryCallback,
+        onError: ErrorCallback
+      ): void;
+      subscribeBars(
+        symbolInfo: LibrarySymbolInfo,
+        resolution: ResolutionString,
+        onRealtimeCallback: SubscribeBarsCallback,
+        subscriberUID: string,
+        onResetCacheNeededCallback: () => void
+      ): void;
+      unsubscribeBars(subscriberUID: string): void;
+    }
+  }
+
+  type OnReadyCallback = (
+    configuration: TradingView.DatafeedConfiguration
+  ) => void;
+  type SearchSymbolsCallback = (symbols: any[]) => void;
+  type ResolveCallback = (symbolInfo: TradingView.LibrarySymbolInfo) => void;
+  type SymbolResolveExtension = any;
+  type HistoryCallback = (
+    bars: TradingView.Bar[],
+    meta?: { noData?: boolean }
+  ) => void;
+  type SubscribeBarsCallback = (bar: TradingView.Bar) => void;
+  type ResolutionString = TradingView.ResolutionString;
+  type LibrarySymbolInfo = TradingView.LibrarySymbolInfo;
+
+  interface PeriodParams {
+    from: number;
+    to: number;
+    firstDataRequest: boolean;
+  }
+}
 import { subscribeOnStream, unsubscribeFromStream } from "./streaming";
 import {
   makeApiRequest,
@@ -40,6 +136,7 @@ import {
   priceScale,
 } from "./helpers";
 
+// 本地类型定义
 type ErrorCallback = any;
 
 interface UrlParameters {

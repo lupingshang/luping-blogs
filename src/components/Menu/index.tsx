@@ -1,116 +1,86 @@
-"use client";
-import React, { useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import {
+  Home as HomeIcon,
+  Inbox as InboxIcon,
+  ShoppingCart,
+  Loupe,
+  Dataset,
+} from "@mui/icons-material";
 import {
   Drawer,
   List,
   ListItem,
   ListItemText,
   ListItemIcon,
-  Collapse,
-  IconButton,
-  Box,
-  Tooltip,
 } from "@mui/material";
-import {
-  ExpandLess,
-  ExpandMore,
-  Home as HomeIcon,
-  Inbox as InboxIcon,
-  ChevronLeft as ChevronLeftIcon,
-  ChevronRight as ChevronRightIcon,
-  ShoppingCart,
-  Loupe,
-  Dataset,
-} from "@mui/icons-material";
+import Link from "next/link";
 
+// 静态菜单数据
+const menuItems = [
+  {
+    key: "home",
+    text: "HOME",
+    icon: <HomeIcon />,
+    path: "/",
+    children: [],
+  },
+  {
+    key: "ron-staking",
+    text: "RON Staking",
+    icon: <InboxIcon />,
+    children: [
+      { text: "stake", path: "/ron-staking/stake" },
+      { text: "WAGMI", path: "/ron-staking/wagmi" },
+    ],
+  },
+  {
+    key: "Listmynft",
+    text: "List My NFT",
+    icon: <Loupe />,
+    path: "/List-my-nft",
+    children: [],
+  },
+  {
+    key: "marketplace",
+    text: "Marketplace",
+    icon: <Dataset />,
+    path: "/marketplace",
+    children: [],
+  },
+  {
+    key: "profile",
+    text: "Profile",
+    icon: <ShoppingCart />,
+    path: "/profile",
+    children: [],
+  },
+  {
+    key: "cex",
+    text: "Cex",
+    icon: <ShoppingCart />,
+    path: "/cex",
+    children: [],
+  },
+  {
+    key: "order-book",
+    text: "orderBook",
+    icon: <ShoppingCart />,
+    path: "/order-book",
+    children: [],
+  },
+];
+
+// 纯服务端组件
 export default function Sidebar() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const [open, setOpen] = useState(true);
-  const [submenuOpen, setSubmenuOpen] = useState<string | null>(null);
-
-  // 根据当前路径自动展开对应的父菜单
-  // React.useEffect(() => {
-  //   menuItems.forEach((item) => {
-  //     if (item.children.length > 0) {
-  //       const isChildActive = item.children.some(
-  //         (child) => child.path === pathname
-  //       );
-  //       if (isChildActive) {
-  //         setSubmenuOpen(item.key);
-  //       }
-  //     }
-  //   });
-  // }, [pathname]);
-
-  const handleSubmenuToggle = (key: string) => {
-    setSubmenuOpen(submenuOpen === key ? null : key);
-  };
-
-  const handleNavigate = (path: string) => {
-    router.push(path);
-  };
-
-  // 菜单配置数据
-  const menuItems = [
-    {
-      key: "home",
-      text: "HOME",
-      icon: <HomeIcon />,
-      path: "/",
-      children: [],
-    },
-    {
-      key: "ron-staking",
-      text: "RON Staking",
-      icon: <InboxIcon />,
-      children: [
-        { text: "stake", path: "/ron-staking/stake" },
-        { text: "WAGMI", path: "/ron-staking/wagmi" },
-      ],
-    },
-    {
-      key: "Listmynft",
-      text: "List My NFT",
-      icon: <Loupe />,
-      path: "/List-my-nft",
-      children: [],
-    },
-    {
-      key: "marketplace",
-      text: "Marketplace",
-      icon: <Dataset />,
-      path: "/marketplace",
-      children: [],
-    },
-    {
-      key: "profile",
-      text: "Profile",
-      icon: <ShoppingCart />,
-      path: "/profile",
-      children: [],
-    },
-    {
-      key: "cex",
-      text: "Cex",
-      icon: <ShoppingCart />,
-      path: "/cex",
-      children: [],
-    },
-  ];
-
   return (
     <Drawer
       sx={{
-        width: open ? 240 : 60,
+        width: 240,
         flexShrink: 0,
         "& .MuiDrawer-paper": {
-          width: open ? 240 : 60,
+          width: 240,
           boxSizing: "border-box",
           bgcolor: "#111417",
           color: "#ffffff",
-          transition: "width 0.2s",
           overflowX: "hidden",
         },
       }}
@@ -118,36 +88,41 @@ export default function Sidebar() {
       anchor="left"
       open
     >
-      {/* 收缩按钮 */}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: open ? "flex-end" : "center",
-          p: 1,
-          borderBottom: "1px solid rgba(255, 255, 255, 0.12)",
-        }}
-      >
-        <IconButton onClick={() => setOpen(!open)} sx={{ color: "#ffffff" }}>
-          {open ? <ChevronLeftIcon /> : <ChevronRightIcon />}
-        </IconButton>
-      </Box>
-
-      {/* 菜单 */}
+      {/* 菜单列表 */}
       <List>
         {menuItems.map((item) => (
-          <React.Fragment key={item.key}>
-            <Tooltip title={!open ? item.text : ""} placement="right">
+          <div key={item.key}>
+            {/* 主菜单项 */}
+            {item.path ? (
+              <Link
+                href={item.path}
+                style={{ textDecoration: "none", color: "inherit" }}
+              >
+                <ListItem
+                  sx={{
+                    cursor: "pointer",
+                    px: 2.5,
+                    "&:hover": {
+                      bgcolor: "rgba(255, 255, 255, 0.08)",
+                    },
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      color: "#ffffff",
+                      minWidth: 0,
+                      mr: 3,
+                      justifyContent: "center",
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText primary={item.text} />
+                </ListItem>
+              </Link>
+            ) : (
               <ListItem
-                onClick={
-                  item.children.length > 0
-                    ? () => handleSubmenuToggle(item.key)
-                    : () => handleNavigate(item.path!)
-                }
                 sx={{
-                  cursor: "pointer",
-                  bgcolor:
-                    pathname === item.path ? "action.selected" : "inherit",
-                  justifyContent: open ? "initial" : "center",
                   px: 2.5,
                 }}
               >
@@ -155,46 +130,41 @@ export default function Sidebar() {
                   sx={{
                     color: "#ffffff",
                     minWidth: 0,
-                    mr: open ? 3 : "auto",
+                    mr: 3,
                     justifyContent: "center",
                   }}
                 >
                   {item.icon}
                 </ListItemIcon>
-                {open && <ListItemText primary={item.text} />}
-                {open &&
-                  item.children.length > 0 &&
-                  (submenuOpen === item.key ? <ExpandLess /> : <ExpandMore />)}
+                <ListItemText primary={item.text} />
               </ListItem>
-            </Tooltip>
+            )}
+
             {/* 子菜单 */}
-            {open && item.children.length > 0 && (
-              <Collapse
-                in={submenuOpen === item.key}
-                timeout="auto"
-                unmountOnExit
-              >
-                <List disablePadding>
-                  {item.children.map((child, childIndex) => (
+            {item.children.length > 0 && (
+              <List disablePadding>
+                {item.children.map((child, childIndex) => (
+                  <Link
+                    key={childIndex}
+                    href={child.path}
+                    style={{ textDecoration: "none", color: "inherit" }}
+                  >
                     <ListItem
-                      key={childIndex}
-                      onClick={() => handleNavigate(child.path)}
                       sx={{
                         cursor: "pointer",
-                        bgcolor:
-                          pathname === child.path
-                            ? "action.selected"
-                            : "inherit",
                         pl: 4,
+                        "&:hover": {
+                          bgcolor: "rgba(255, 255, 255, 0.08)",
+                        },
                       }}
                     >
                       <ListItemText primary={child.text} />
                     </ListItem>
-                  ))}
-                </List>
-              </Collapse>
+                  </Link>
+                ))}
+              </List>
             )}
-          </React.Fragment>
+          </div>
         ))}
       </List>
     </Drawer>
