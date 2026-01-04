@@ -1,7 +1,6 @@
-"use client";
 import { Geist, Geist_Mono } from "next/font/google";
-import { ThemeProvider, createTheme, CssBaseline } from "@mui/material";
 import Layout from "@/components/Layout";
+import ClientThemeProvider from "@/components/ClientThemeProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,19 +11,6 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
-});
-
-const darkTheme = createTheme({
-  palette: {
-    mode: "dark",
-    background: {
-      default: "#111417",
-      paper: "#111417",
-    },
-    text: {
-      primary: "#ffffff",
-    },
-  },
 });
 
 export default function RootLayout({
@@ -40,15 +26,13 @@ export default function RootLayout({
           name="viewport"
           content="width=device-width,initial-scale=1.0,user-scalable=no"
         />
-        <script src="/charting_library/charting_library.min.js"></script>
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider theme={darkTheme}>
-          <CssBaseline />
+        <ClientThemeProvider>
           <Layout>{children}</Layout>
-        </ThemeProvider>
+        </ClientThemeProvider>
       </body>
     </html>
   );

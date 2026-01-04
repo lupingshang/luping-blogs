@@ -202,7 +202,7 @@ MockWebsockFeed.prototype.getBars = function (
 MockWebsockFeed.prototype.startRealTimeSimulation = function () {
   const that = this;
 
-  // 每2秒更新一次实时数据
+  // 每2秒更新一次实时数据（更新当前K线）
   setInterval(() => {
     if (
       !that.subscribe ||
@@ -240,44 +240,46 @@ MockWebsockFeed.prototype.startRealTimeSimulation = function () {
     });
   }, 2000);
 
-  // 每分钟生成新的K线
-  setInterval(() => {
-    if (
-      !that.subscribe ||
-      !that.lastBar ||
-      that.realtimeCallbacks.length === 0
-    ) {
-      return;
-    }
+  // 根据分辨率动态生成新K线
+  that.realtimeCallbacks.forEach((item) => {
+    const intervalMs = getIntervalInMs(item.resolution);
 
-    // 生成新的K线数据点
-    const newTime = that.lastBar.time + 60000; // 1分钟后
-    const newOpen = that.lastBar.close;
-    const change = (Math.random() - 0.5) * 10;
-    const newClose = newOpen + change;
-    const newHigh = Math.max(newOpen, newClose) + Math.random() * 5;
-    const newLow = Math.min(newOpen, newClose) - Math.random() * 5;
-    const newVolume = Math.random() * 200 + 50;
+    setInterval(() => {
+      if (
+        !that.subscribe ||
+        !that.lastBar ||
+        that.realtimeCallbacks.length === 0
+      ) {
+        return;
+      }
 
-    const newBar = {
-      time: newTime,
-      open: parseFloat(newOpen.toFixed(2)),
-      high: parseFloat(newHigh.toFixed(2)),
-      low: parseFloat(newLow.toFixed(2)),
-      close: parseFloat(newClose.toFixed(2)),
-      volume: parseFloat(newVolume.toFixed(2)),
-    };
+      // 生成新的K线数据点
+      const newTime = that.lastBar.time + intervalMs;
+      const newOpen = that.lastBar.close;
+      const change = (Math.random() - 0.5) * 10;
+      const newClose = newOpen + change;
+      const newHigh = Math.max(newOpen, newClose) + Math.random() * 5;
+      const newLow = Math.min(newOpen, newClose) - Math.random() * 5;
+      const newVolume = Math.random() * 200 + 50;
 
-    that.lastBar = newBar;
-    that.currentBar = newBar;
+      const newBar = {
+        time: newTime,
+        open: parseFloat(newOpen.toFixed(2)),
+        high: parseFloat(newHigh.toFixed(2)),
+        low: parseFloat(newLow.toFixed(2)),
+        close: parseFloat(newClose.toFixed(2)),
+        volume: parseFloat(newVolume.toFixed(2)),
+      };
 
-    // 通知所有订阅者
-    that.realtimeCallbacks.forEach((item) => {
+      that.lastBar = newBar;
+      that.currentBar = newBar;
+
+      // 只通知对应分辨率的订阅者
       if (item.callback) {
         item.callback(newBar);
       }
-    });
-  }, 60000); // 每分钟
+    }, intervalMs);
+  });
 };
 
 MockWebsockFeed.prototype.periodLengthSeconds = function (

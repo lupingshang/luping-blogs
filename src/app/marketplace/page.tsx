@@ -10,7 +10,7 @@ import type { Abi } from "@/types/generated";
 import type { ProcessedNFT } from "@/utils/common";
 import { Abi__factory } from "@/types/generated";
 
-const contractAddress = "0xeCC1F28e7dc83D4430FeDEfd1A2605441AD1A731" as const;
+const contractAddress = "0x7487930938A719a495b688B7f1BC047A53ed720c";
 
 export default function Marketplace() {
   useWalletReconnect();
@@ -41,6 +41,7 @@ export default function Marketplace() {
         if (!Array.isArray(mynfts)) {
           throw new Error("getAllNFTs 返回的数据格式不正确");
         }
+        console.log("mynfts==----->", mynfts);
 
         // 将 Proxy 对象转换为普通数组并获取完整数据
         const nftArray = await nftProxyToArray(

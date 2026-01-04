@@ -25,6 +25,60 @@ const TvChart: React.FC<TvChartProps> = ({
 }) => {
   const [dataParam, setDataParam] = useState<any>(null);
   const [theme, setTheme] = useState<string>("dark");
+  const [isLibraryLoaded, setIsLibraryLoaded] = useState<boolean>(false);
+
+  // 🔧 【动态加载 TradingView 库】
+  useEffect(() => {
+    const loadTradingViewLibrary = () => {
+      return new Promise<void>((resolve, reject) => {
+        // 🔍 检查是否已经加载
+        if (window.TradingView) {
+          console.log("✅ TradingView 库已存在");
+          setIsLibraryLoaded(true);
+          resolve();
+          return;
+        }
+
+        // 🔍 检查是否已有 script 标签
+        const existingScript = document.querySelector(
+          'script[src="/charting_library/charting_library.min.js"]'
+        );
+        if (existingScript) {
+          console.log("📜 TradingView script 标签已存在，等待加载完成...");
+          existingScript.addEventListener("load", () => {
+            console.log("✅ TradingView 库加载完成");
+            setIsLibraryLoaded(true);
+            resolve();
+          });
+          existingScript.addEventListener("error", reject);
+          return;
+        }
+
+        // 🚀 创建并加载 script 标签
+        console.log("📥 开始动态加载 TradingView 库...");
+        const script = document.createElement("script");
+        script.src = "/charting_library/charting_library.min.js";
+        script.async = true;
+
+        script.onload = () => {
+          console.log("✅ TradingView 库动态加载成功");
+          setIsLibraryLoaded(true);
+          resolve();
+        };
+
+        script.onerror = (error) => {
+          console.error("❌ TradingView 库加载失败:", error);
+          reject(error);
+        };
+
+        document.head.appendChild(script);
+      });
+    };
+
+    loadTradingViewLibrary().catch((error) => {
+      console.error("❌ 加载 TradingView 库时出错:", error);
+    });
+  }, []);
 
   // 🔧 【全局环境配置】- 设置TradingView运行所需的全局变量和jQuery
   useEffect(() => {
@@ -114,6 +168,23 @@ const TvChart: React.FC<TvChartProps> = ({
     console.log("- resolveSymbol:", typeof newDatafeed.resolveSymbol);
     console.log("- getBars:", typeof newDatafeed.getBars);
     console.log("- subscribeBars:", typeof newDatafeed.subscribeBars);
+    console.log("- unsubscribeBars:", typeof newDatafeed.unsubscribeBars);
+
+    // 验证 datafeed 是否有必需的方法
+    const requiredMethods = [
+      "onReady",
+      "resolveSymbol",
+      "getBars",
+      "subscribeBars",
+    ];
+    const missingMethods = requiredMethods.filter(
+      (method) => typeof newDatafeed[method] !== "function"
+    );
+
+    if (missingMethods.length > 0) {
+      console.error("❌ 数据源缺少必需方法:", missingMethods);
+      return;
+    }
 
     // 🎨 【TradingView核心配置对象】
     const config = {
@@ -184,24 +255,7 @@ const TvChart: React.FC<TvChartProps> = ({
 
       // 🎨 【CSS样式文件配置】
       custom_css_url: "/charting_library/static/bundles/common.css", // 🎨 自定义CSS文件路径
-      // ⏰ 【时间周期支持配置】
-      supported_resolutions: [
-        "1", // 1分钟
-        "5", // 5分钟
-        "15", // 15分钟
-        "30", // 30分钟
-        "60", // 1小时
-        "4H", // 4小时
-        "1D", // 1天
-        "1W", // 1周
-        "1M", // 1月
-      ],
 
-      // 💾 【数据存储配置】
-      charts_storage_url: "http://saveload.tradingview.com", // 💾 图表保存服务URL
-      charts_storage_api_version: "1.1", // 📋 存储API版本
-      client_id: "tradingview.com", // 🆔 客户端标识
-      user_id: "public_user_id", // 👤 用户标识
       // 🎨 【图表样式覆盖配置】- 自定义图表外观
       overrides: {
         // 🏠 【背景和网格配置】
@@ -230,39 +284,6 @@ const TvChart: React.FC<TvChartProps> = ({
         // 📊 【成交量面板配置】
         volumePaneSize: "small", // 📏 成交量面板大小
       },
-      // ⏰ 【时间框架配置】- 快速时间切换按钮
-      time_frames: [
-        {
-          text: "1min", // 🏷️ 按钮显示文字
-          resolution: "1", // ⏰ 对应的时间分辨率
-          description: "realtime", // 📝 描述信息
-          title: "realtime", // 🏷️ 标题
-        },
-        { text: "1min", resolution: "1", description: "1min" }, // 1分钟
-        { text: "5min", resolution: "5", description: "5min" }, // 5分钟
-        { text: "15min", resolution: "15", description: "15min" }, // 15分钟
-        { text: "30min", resolution: "30", description: "30min" }, // 30分钟
-        {
-          text: "1hour",
-          resolution: "60",
-          description: "1hour",
-          title: "1hour",
-        }, // 1小时
-        {
-          text: "4hour",
-          resolution: "240",
-          description: "4hour",
-          title: "4hour",
-        }, // 4小时
-        { text: "1day", resolution: "1D", description: "1day", title: "1day" }, // 1天
-        {
-          text: "1week",
-          resolution: "1W",
-          description: "1week",
-          title: "1week",
-        }, // 1周
-        { text: "1mon", resolution: "1M", description: "1mon" }, // 1月
-      ],
     };
 
     // 🌓 【主题切换逻辑】- 根据本地存储的主题设置调整样式
@@ -283,10 +304,15 @@ const TvChart: React.FC<TvChartProps> = ({
     // 🚀 【TradingView Widget初始化】
     if (window.TradingView) {
       console.log("🎯 开始创建TradingView Widget...");
-      console.log("📋 配置对象:", config);
+      console.log("📋 配置对象:", JSON.stringify(config, null, 2));
 
-      window.tvWidget = new window.TradingView.widget(config);
-      console.log("✅ TradingView widget创建完成:", window.tvWidget);
+      try {
+        window.tvWidget = new window.TradingView.widget(config);
+        console.log("✅ TradingView widget创建完成:", window.tvWidget);
+      } catch (error) {
+        console.error("❌ 创建 TradingView widget 时出错:", error);
+        return;
+      }
 
       // 📈 【图表就绪回调】- 图表加载完成后执行的操作
       window.tvWidget.onChartReady(() => {
@@ -366,6 +392,12 @@ const TvChart: React.FC<TvChartProps> = ({
 
   // 🚀 【图表初始化】- 组件挂载后初始化TradingView图表
   useEffect(() => {
+    // 🔍 【等待库加载完成】
+    if (!isLibraryLoaded) {
+      console.log("⏳ 等待 TradingView 库加载完成...");
+      return;
+    }
+
     const initChart = () => {
       console.log("🔍 检查TradingView加载状态...");
       console.log("📊 window.TradingView:", !!window.TradingView);
@@ -379,25 +411,61 @@ const TvChart: React.FC<TvChartProps> = ({
         console.log("✅ TradingView已加载，开始初始化图表");
         getKline(); // 🎯 开始创建图表
       } else {
-        console.log("⏳ TradingView未加载，100ms后重试...");
+        console.log("⏳ TradingView未完全加载，100ms后重试...");
         setTimeout(initChart, 100); // 🔄 延迟重试直到库加载完成
       }
     };
 
     // ⏰ 【延迟初始化】- 确保DOM和脚本都完全加载
-    setTimeout(initChart, 500); // 🕐 延迟500ms确保环境就绪
-  }, [symbol, interval, type]); // 📊 当交易对或时间间隔变化时重新初始化
+    setTimeout(initChart, 200); // 🕐 减少延迟，因为我们已经确认库已加载
+  }, [symbol, interval, type, isLibraryLoaded]); // 📊 添加 isLibraryLoaded 依赖
+
+  // 🧹 【组件清理】- 组件卸载时清理资源
+  useEffect(() => {
+    return () => {
+      if (window.tvWidget) {
+        console.log("🧹 清理 TradingView Widget");
+        try {
+          window.tvWidget.remove();
+          window.tvWidget = null;
+        } catch (error) {
+          console.warn("⚠️ 清理 Widget 时出现警告:", error);
+        }
+      }
+    };
+  }, []);
 
   return (
-    // 🏠 【图表容器】- TradingView图表的DOM挂载点
-    <div
-      id="tv_chart_container" // 🆔 容器ID，必须与config中的container_id一致
-      style={{
-        width: "100%", // 📏 宽度占满父容器
-        height: "100%", // 📏 高度占满父容器
-        margin: "auto", // 🎯 居中对齐
-      }}
-    />
+    <>
+      {/* 🔄 【加载状态显示】 */}
+      {!isLibraryLoaded && (
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#161A1E",
+            color: "#61688A",
+            fontSize: "14px",
+          }}
+        >
+          📥 正在加载 TradingView 图表库...
+        </div>
+      )}
+
+      {/* 🏠 【图表容器】- TradingView图表的DOM挂载点 */}
+      <div
+        id="tv_chart_container" // 🆔 容器ID，必须与config中的container_id一致
+        style={{
+          width: "100%", // 📏 宽度占满父容器
+          height: "100%", // 📏 高度占满父容器
+          margin: "auto", // 🎯 居中对齐
+          display: isLibraryLoaded ? "block" : "none", // 🎭 只在库加载完成后显示
+        }}
+      />
+    </>
   );
 };
 
